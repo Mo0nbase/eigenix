@@ -158,6 +158,9 @@ in
       volumes = [
         "${settings.storage.baseDataDir}/monerod-data:/monerod-data:rw"
       ];
+      ports = [
+        "127.0.0.1:18081:18081/tcp"
+      ];
       cmd = [
         "monerod"
         "--rpc-bind-ip=0.0.0.0"
@@ -195,7 +198,7 @@ in
         "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:rw"
       ];
       ports = [
-        // TODO: close this later
+        # TODO: close this later
         "127.0.0.1:8332:8332/tcp"
       ];
       cmd = [

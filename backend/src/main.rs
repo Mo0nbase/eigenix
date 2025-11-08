@@ -34,6 +34,51 @@ async fn bitcoin_metrics() -> Result<Json<metrics::BitcoinMetrics>, String> {
     Ok(Json(metrics))
 }
 
+async fn monero_metrics() -> Result<Json<metrics::MoneroMetrics>, String> {
+    let client = metrics::MoneroRpcClient::new("http://127.0.0.1:18081/json_rpc".to_string());
+
+    let metrics = client
+        .get_metrics()
+        .await
+        .map_err(|e| format!("Failed to get Monero metrics: {}", e))?;
+
+    Ok(Json(metrics))
+}
+
+async fn asb_metrics() -> Result<Json<metrics::AsbMetrics>, String> {
+    let client = metrics::AsbRpcClient::new("http://127.0.0.1:9944".to_string());
+
+    let metrics = client
+        .get_metrics()
+        .await
+        .map_err(|e| format!("Failed to get ASB metrics: {}", e))?;
+
+    Ok(Json(metrics))
+}
+
+async fn electrs_metrics() -> Result<Json<metrics::ElectrsMetrics>, String> {
+    let client = metrics::ElectrsClient::new("electrs".to_string());
+
+    let metrics = client
+        .get_metrics()
+        .await
+        .map_err(|e| format!("Failed to get Electrs metrics: {}", e))?;
+
+    Ok(Json(metrics))
+}
+
+async fn container_metrics() -> Result<Json<Vec<metrics::ContainerMetrics>>, String> {
+    let client = metrics::ContainerHealthClient::new();
+    let containers = vec!["bitcoind", "electrs", "monerod", "asb", "asb-controller"];
+
+    let metrics = client
+        .get_metrics(&containers)
+        .await
+        .map_err(|e| format!("Failed to get container metrics: {}", e))?;
+
+    Ok(Json(metrics))
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing
@@ -46,6 +91,10 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/metrics/bitcoin", get(bitcoin_metrics))
+        .route("/metrics/monero", get(monero_metrics))
+        .route("/metrics/asb", get(asb_metrics))
+        .route("/metrics/electrs", get(electrs_metrics))
+        .route("/metrics/containers", get(container_metrics))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
