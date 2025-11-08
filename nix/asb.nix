@@ -129,7 +129,7 @@ in
     systemd.tmpfiles.rules = [
       # Main data directories - 700 to prevent unauthorized access
       "d ${settings.storage.baseDataDir}/asb-data 0700 1000 1000 -"
-      "d ${settings.storage.baseDataDir}/bitcoind-data 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/bitcoind-data 0755 1000 1000 -"
       "d ${settings.storage.baseDataDir}/electrs-data 0700 1000 1000 -"
       "d ${settings.storage.baseDataDir}/monerod-data 0700 1000 1000 -"
 
@@ -207,8 +207,8 @@ in
         "bitcoind"
         "-chain=${bitcoinChain}"
         "-rpcallowip=127.0.0.1"
-        # Restrict to container network subnet only (eigenix-network: 10.89.0.0/24)
-        "-rpcallowip=10.89.0.0/24"
+        # Restrict to container network subnet only (eigenix-network uses 10.89.0.0/16 for all subnets)
+        "-rpcallowip=10.89.0.0/16"
         "-rpcbind=0.0.0.0:${toString settings.ports.bitcoinRpc}"
         "-bind=0.0.0.0:8333"
         "-datadir=/bitcoind-data/"
@@ -242,8 +242,8 @@ in
     virtualisation.oci-containers.containers."electrs" = {
       image = "getumbrel/electrs@sha256:622657fbdc7331a69f5b3444e6f87867d51ac27d90c399c8bf25d9aab020052b";
       volumes = [
-        "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:ro"
-        "${settings.storage.baseDataDir}/electrs-data:/electrs-data:rw"
+        "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:ro,z"
+        "${settings.storage.baseDataDir}/electrs-data:/electrs-data:rw,Z"
       ];
       cmd = [
         "electrs"
@@ -267,6 +267,8 @@ in
         "--pids-limit=1024"
         # Security options
         "--security-opt=no-new-privileges:true"
+        # Allow container to read volumes with proper user mapping
+        "--userns=keep-id"
       ];
     };
     systemd.services."podman-electrs" = {
