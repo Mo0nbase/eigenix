@@ -10,6 +10,7 @@ pub struct BitcoinMetrics {
     pub headers: u64,
     pub verification_progress: f64,
     pub size_on_disk: u64,
+    pub wallet_balance: Option<f64>, // in BTC
 }
 
 /// Monero blockchain information
@@ -19,6 +20,7 @@ pub struct MoneroMetrics {
     pub target_height: u64,
     pub difficulty: u64,
     pub tx_count: u64,
+    pub wallet_balance: Option<f64>, // in XMR
 }
 
 /// ASB (Automated Swap Backend) metrics
@@ -141,12 +143,27 @@ impl BitcoinRpcClient {
     pub async fn get_metrics(&self) -> Result<BitcoinMetrics> {
         let info: BlockchainInfo = self.call("getblockchaininfo").await?;
 
+        // Try to get wallet balance (may fail if no wallet loaded)
+        let wallet_balance = self.get_wallet_balance().await.ok();
+
         Ok(BitcoinMetrics {
             blocks: info.blocks,
             headers: info.headers,
             verification_progress: info.verification_progress,
             size_on_disk: info.size_on_disk,
+            wallet_balance,
         })
+    }
+
+    /// Get wallet balance in BTC
+    async fn get_wallet_balance(&self) -> Result<f64> {
+        #[derive(Deserialize)]
+        struct BalanceResult {
+            balance: f64,
+        }
+
+        let result: BalanceResult = self.call("getbalances").await?;
+        Ok(result.balance)
     }
 }
 
@@ -199,12 +216,51 @@ impl MoneroRpcClient {
             .result
             .context("Monero RPC response missing result")?;
 
+        // Try to get wallet balance (may fail if wallet RPC not available)
+        let wallet_balance = self.get_wallet_balance().await.ok();
+
         Ok(MoneroMetrics {
             height: info.height,
             target_height: info.target_height,
             difficulty: info.difficulty,
             tx_count: info.tx_count,
+            wallet_balance,
         })
+    }
+
+    /// Get wallet balance in XMR (requires monero-wallet-rpc)
+    async fn get_wallet_balance(&self) -> Result<f64> {
+        #[derive(Deserialize)]
+        struct BalanceResult {
+            balance: u64, // Balance in atomic units
+        }
+
+        let client = reqwest::Client::new();
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": "0",
+            "method": "get_balance"
+        });
+
+        let response = client
+            .post(&self.url)
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .context("Failed to send Monero wallet RPC request")?;
+
+        let rpc_response: MoneroRpcResponse<BalanceResult> = response
+            .json()
+            .await
+            .context("Failed to parse Monero wallet RPC response")?;
+
+        let balance_result = rpc_response
+            .result
+            .context("Monero wallet RPC response missing result")?;
+
+        // Convert atomic units to XMR (1 XMR = 10^12 atomic units)
+        Ok(balance_result.balance as f64 / 1_000_000_000_000.0)
     }
 }
 

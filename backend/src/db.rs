@@ -15,6 +15,7 @@ pub struct StoredBitcoinMetrics {
     pub headers: u64,
     pub verification_progress: f64,
     pub size_on_disk: u64,
+    pub wallet_balance: Option<f64>,
 }
 
 /// Database-stored Monero metrics with timestamp
@@ -25,6 +26,7 @@ pub struct StoredMoneroMetrics {
     pub target_height: u64,
     pub difficulty: u64,
     pub tx_count: u64,
+    pub wallet_balance: Option<f64>,
 }
 
 /// Database-stored ASB metrics with timestamp
@@ -104,6 +106,7 @@ impl MetricsDatabase {
             headers: metrics.headers,
             verification_progress: metrics.verification_progress,
             size_on_disk: metrics.size_on_disk,
+            wallet_balance: metrics.wallet_balance,
         };
 
         let _: Option<StoredBitcoinMetrics> = self
@@ -124,6 +127,7 @@ impl MetricsDatabase {
             target_height: metrics.target_height,
             difficulty: metrics.difficulty,
             tx_count: metrics.tx_count,
+            wallet_balance: metrics.wallet_balance,
         };
 
         let _: Option<StoredMoneroMetrics> = self
