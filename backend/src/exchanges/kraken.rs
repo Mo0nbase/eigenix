@@ -83,6 +83,61 @@ pub struct OrderStatusDescription {
     pub price2: String,
 }
 
+/// Deposit address information
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DepositAddress {
+    pub address: String,
+    pub expiretm: Option<String>,
+    pub new: Option<bool>,
+    pub memo: Option<String>, // For assets that require a memo/tag
+}
+
+/// Deposit method information
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DepositMethod {
+    pub method: String,
+    pub limit: Option<String>,
+    pub fee: Option<String>,
+    #[serde(rename = "gen-address")]
+    pub gen_address: Option<bool>,
+}
+
+/// Withdrawal information
+#[derive(Debug, Deserialize, Serialize)]
+pub struct WithdrawalInfo {
+    pub refid: String, // Reference ID for the withdrawal
+}
+
+/// Deposit status
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DepositStatus {
+    pub method: String,
+    pub aclass: String,
+    pub asset: String,
+    pub refid: String,
+    pub txid: String,
+    pub info: String,
+    pub amount: String,
+    pub fee: Option<String>,
+    pub time: u64,
+    pub status: String,
+}
+
+/// Withdrawal status
+#[derive(Debug, Deserialize, Serialize)]
+pub struct WithdrawalStatus {
+    pub method: String,
+    pub aclass: String,
+    pub asset: String,
+    pub refid: String,
+    pub txid: String,
+    pub info: String,
+    pub amount: String,
+    pub fee: String,
+    pub time: u64,
+    pub status: String,
+}
+
 impl KrakenClient {
     /// Create a new Kraken API client
     pub fn new(api_key: String, api_secret: String) -> Self {
@@ -281,6 +336,137 @@ impl KrakenClient {
         params.insert("txid".to_string(), txid.to_string());
 
         self.private_request("CancelOrder", &mut params).await
+    }
+
+    // ===== Deposit and Withdrawal Methods =====
+
+    /// Get deposit methods for an asset
+    ///
+    /// # Arguments
+    /// * `asset` - Asset to get deposit methods for (e.g., "XBT" for Bitcoin, "XMR" for Monero)
+    pub async fn get_deposit_methods(&self, asset: &str) -> Result<Vec<DepositMethod>> {
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), asset.to_string());
+
+        self.private_request("DepositMethods", &mut params).await
+    }
+
+    /// Get or generate a deposit address for an asset
+    ///
+    /// # Arguments
+    /// * `asset` - Asset to get deposit address for (e.g., "XBT" for Bitcoin, "XMR" for Monero)
+    /// * `method` - Deposit method name (get from get_deposit_methods)
+    /// * `new` - Whether to generate a new address (default: false)
+    pub async fn get_deposit_address(
+        &self,
+        asset: &str,
+        method: &str,
+        new: bool,
+    ) -> Result<Vec<DepositAddress>> {
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), asset.to_string());
+        params.insert("method".to_string(), method.to_string());
+        if new {
+            params.insert("new".to_string(), "true".to_string());
+        }
+
+        self.private_request("DepositAddresses", &mut params).await
+    }
+
+    /// Get Bitcoin deposit address
+    ///
+    /// # Arguments
+    /// * `new` - Whether to generate a new address
+    pub async fn get_btc_deposit_address(&self, new: bool) -> Result<String> {
+        // First get deposit methods to find the right method name
+        let methods = self.get_deposit_methods("XBT").await?;
+        let method = methods
+            .first()
+            .context("No deposit methods available for Bitcoin")?;
+
+        let addresses = self.get_deposit_address("XBT", &method.method, new).await?;
+        let addr = addresses.first().context("No deposit address returned")?;
+
+        Ok(addr.address.clone())
+    }
+
+    /// Get Monero deposit address
+    ///
+    /// # Arguments
+    /// * `new` - Whether to generate a new address
+    pub async fn get_xmr_deposit_address(&self, new: bool) -> Result<String> {
+        // First get deposit methods to find the right method name
+        let methods = self.get_deposit_methods("XMR").await?;
+        let method = methods
+            .first()
+            .context("No deposit methods available for Monero")?;
+
+        let addresses = self.get_deposit_address("XMR", &method.method, new).await?;
+        let addr = addresses.first().context("No deposit address returned")?;
+
+        Ok(addr.address.clone())
+    }
+
+    /// Withdraw funds from Kraken
+    ///
+    /// # Arguments
+    /// * `asset` - Asset to withdraw (e.g., "XBT" for Bitcoin, "XMR" for Monero)
+    /// * `key` - Withdrawal key name (must be pre-configured in Kraken account)
+    /// * `amount` - Amount to withdraw
+    pub async fn withdraw(&self, asset: &str, key: &str, amount: &str) -> Result<WithdrawalInfo> {
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), asset.to_string());
+        params.insert("key".to_string(), key.to_string());
+        params.insert("amount".to_string(), amount.to_string());
+
+        self.private_request("Withdraw", &mut params).await
+    }
+
+    /// Withdraw Bitcoin to a pre-configured address
+    ///
+    /// # Arguments
+    /// * `key` - Withdrawal key name configured in Kraken account
+    /// * `amount` - Amount of BTC to withdraw
+    pub async fn withdraw_btc(&self, key: &str, amount: &str) -> Result<WithdrawalInfo> {
+        self.withdraw("XBT", key, amount).await
+    }
+
+    /// Withdraw Monero to a pre-configured address
+    ///
+    /// # Arguments
+    /// * `key` - Withdrawal key name configured in Kraken account
+    /// * `amount` - Amount of XMR to withdraw
+    pub async fn withdraw_xmr(&self, key: &str, amount: &str) -> Result<WithdrawalInfo> {
+        self.withdraw("XMR", key, amount).await
+    }
+
+    /// Get status of recent deposits
+    ///
+    /// # Arguments
+    /// * `asset` - Optional asset filter (e.g., "XBT", "XMR")
+    pub async fn get_deposit_status(&self, asset: Option<&str>) -> Result<Vec<DepositStatus>> {
+        let mut params = HashMap::new();
+        if let Some(a) = asset {
+            params.insert("asset".to_string(), a.to_string());
+        }
+
+        self.private_request("DepositStatus", &mut params).await
+    }
+
+    /// Get status of recent withdrawals
+    ///
+    /// # Arguments
+    /// * `asset` - Optional asset filter (e.g., "XBT", "XMR")
+    pub async fn get_withdrawal_status(
+        &self,
+        asset: Option<&str>,
+    ) -> Result<Vec<WithdrawalStatus>> {
+        let mut params = HashMap::new();
+        if let Some(a) = asset {
+            params.insert("asset".to_string(), a.to_string());
+        }
+
+        self.private_request("WithdrawStatus", &mut params).await
     }
 }
 
