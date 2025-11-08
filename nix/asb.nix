@@ -403,11 +403,5 @@ in
 
     # Firewall for ASB
     networking.firewall.allowedTCPPorts = [ config.eigenix.finalSettings.ports.asbP2p ];
-
-    # Root target
-    systemd.targets."eigenix-root" = {
-      unitConfig.Description = "Eigenix root target";
-      wantedBy = [ "multi-user.target" ];
-    };
   };
 }
