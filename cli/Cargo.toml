@@ -8,3 +8,7 @@ edition.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
+serde.workspace = true
+serde_json.workspace = true
+dialoguer = "0.11"
+colored = "2.1"
