@@ -13,6 +13,7 @@ use tracing_subscriber;
 
 mod config;
 mod db;
+mod kraken;
 mod metrics;
 
 use config::{Cli, Config};
