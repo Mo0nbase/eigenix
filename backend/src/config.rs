@@ -31,13 +31,26 @@ pub struct Cli {
     pub host: Option<String>,
 
     /// Server listen port
-    #[arg(long, default_value = "1234")]
+    #[arg(long, default_value = "1235")]
     pub port: Option<u16>,
+
+    /// SurrealDB endpoint
+    #[arg(long, default_value = "127.0.0.1:8001")]
+    pub db_endpoint: Option<String>,
+
+    /// SurrealDB namespace
+    #[arg(long, default_value = "eigenix")]
+    pub db_namespace: Option<String>,
+
+    /// SurrealDB database name
+    #[arg(long, default_value = "metrics")]
+    pub db_database: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
+    pub database: DatabaseConfig,
     pub bitcoin: BitcoinConfig,
     pub monero: MoneroConfig,
     pub asb: AsbConfig,
@@ -48,6 +61,13 @@ pub struct Config {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseConfig {
+    pub endpoint: String,
+    pub namespace: String,
+    pub database: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,7 +96,12 @@ impl Default for Config {
         Self {
             server: ServerConfig {
                 host: "127.0.0.1".to_string(),
-                port: 1234,
+                port: 1235,
+            },
+            database: DatabaseConfig {
+                endpoint: "127.0.0.1:8001".to_string(),
+                namespace: "eigenix".to_string(),
+                database: "metrics".to_string(),
             },
             bitcoin: BitcoinConfig {
                 rpc_url: "http://127.0.0.1:8332".to_string(),
@@ -119,6 +144,15 @@ impl Config {
         }
         if let Some(port) = cli.port {
             config.server.port = port;
+        }
+        if let Some(endpoint) = cli.db_endpoint {
+            config.database.endpoint = endpoint;
+        }
+        if let Some(namespace) = cli.db_namespace {
+            config.database.namespace = namespace;
+        }
+        if let Some(database) = cli.db_database {
+            config.database.database = database;
         }
         if let Some(url) = cli.bitcoin_rpc_url {
             config.bitcoin.rpc_url = url;

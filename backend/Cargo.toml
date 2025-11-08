@@ -19,3 +19,4 @@ reqwest = { version = "0.12.24", features = ["json", "rustls-tls"], default-feat
 base64 = "0.22.1"
 clap = { version = "4.5.51", features = ["derive"] }
 toml = "0.9.8"
+chrono = { version = "0.4", features = ["serde"] }
