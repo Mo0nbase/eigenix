@@ -11,6 +11,7 @@ with lib;
 
 let
   cfg = config.services.eigenix-backend;
+  settings = config.eigenix.finalSettings;
 in
 {
   options.services.eigenix-backend = {
@@ -18,38 +19,8 @@ in
 
     package = mkOption {
       type = types.package;
-      default = pkgs.emptyDirectory; # Placeholder - will be replaced with actual build
+      default = pkgs.emptyDirectory;
       description = "The eigenix-backend package to run";
-    };
-
-    port = mkOption {
-      type = types.port;
-      default = config.services.eigenix-ports.eigenixBackend or 3000;
-      description = "Port for the backend API";
-    };
-
-    host = mkOption {
-      type = types.str;
-      default = "127.0.0.1";
-      description = "Host address to bind to (default localhost only)";
-    };
-
-    asbRpcUrl = mkOption {
-      type = types.str;
-      default = "http://localhost:${toString (config.services.eigenix-ports.asbRpc or 9944)}";
-      description = "URL for ASB RPC endpoint";
-    };
-
-    bitcoinRpcUrl = mkOption {
-      type = types.str;
-      default = "http://localhost:${toString (config.services.eigenix-ports.bitcoinRpc or 8332)}";
-      description = "URL for Bitcoin RPC endpoint";
-    };
-
-    moneroRpcUrl = mkOption {
-      type = types.str;
-      default = "http://localhost:${toString (config.services.eigenix-ports.moneroRpc or 18081)}";
-      description = "URL for Monero RPC endpoint";
     };
   };
 
@@ -61,12 +32,12 @@ in
       partOf = [ "eigenix-root.target" ];
 
       environment = {
-        BIND_HOST = cfg.host;
-        BIND_PORT = toString cfg.port;
-        ASB_RPC_URL = cfg.asbRpcUrl;
-        BITCOIN_RPC_URL = cfg.bitcoinRpcUrl;
-        MONERO_RPC_URL = cfg.moneroRpcUrl;
-        RUST_LOG = "info";
+        BIND_HOST = settings.backend.host;
+        BIND_PORT = toString settings.ports.eigenixBackend;
+        ASB_RPC_URL = "http://localhost:${toString settings.ports.asbRpc}";
+        BITCOIN_RPC_URL = "http://localhost:${toString settings.ports.bitcoinRpc}";
+        MONERO_RPC_URL = "http://localhost:${toString settings.ports.moneroRpc}";
+        RUST_LOG = settings.backend.logLevel;
       };
 
       serviceConfig = {
@@ -101,8 +72,10 @@ in
     };
 
     # Only open firewall if binding to non-localhost
-    networking.firewall.allowedTCPPorts = mkIf (cfg.host != "127.0.0.1" && cfg.host != "localhost") [
-      cfg.port
-    ];
+    networking.firewall.allowedTCPPorts =
+      mkIf (settings.backend.host != "127.0.0.1" && settings.backend.host != "localhost")
+        [
+          settings.ports.eigenixBackend
+        ];
   };
 }

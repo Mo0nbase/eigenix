@@ -35,16 +35,11 @@ with lib;
 
 let
   cfg = config.services.eigenix-mempool;
+  settings = config.eigenix.finalSettings;
 in
 {
   options.services.eigenix-mempool = {
     enable = mkEnableOption "Eigenix mempool.space Bitcoin block explorer";
-
-    baseDataDir = mkOption {
-      type = types.str;
-      default = "/mnt/vault";
-      description = "Base directory for all persistent data";
-    };
   };
 
   config = mkIf cfg.enable {
@@ -54,11 +49,11 @@ in
     # Ensure data directories exist with secure permissions
     systemd.tmpfiles.rules = [
       # Mempool data directory - 700 for maximum security (owner-only access)
-      "d ${cfg.baseDataDir}/mempool 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/mempool 0700 1000 1000 -"
       # MariaDB uses UID 999 in the container
-      "d ${cfg.baseDataDir}/mempool/mysql 0700 999 999 -"
+      "d ${settings.storage.baseDataDir}/mempool/mysql 0700 999 999 -"
       # Cache owned by mempool-api user
-      "d ${cfg.baseDataDir}/mempool/cache 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/mempool/cache 0700 1000 1000 -"
     ];
 
     # Mempool.space stack
@@ -66,7 +61,7 @@ in
       "mempool-db" = {
         image = "mariadb@sha256:9e7695800ab8fa72d75053fe536b090d0c9373465b32a073c73bc7940a2e8dbe";
         volumes = [
-          "${cfg.baseDataDir}/mempool/mysql:/var/lib/mysql:rw"
+          "${settings.storage.baseDataDir}/mempool/mysql:/var/lib/mysql:rw"
         ];
         environment = {
           MYSQL_DATABASE = "mempool";
@@ -94,7 +89,7 @@ in
           BACKEND_MAINNET_HTTP_HOST = "mempool-api";
         };
         ports = [
-          "0.0.0.0:${toString config.services.eigenix-ports.mempoolWeb}:8080"
+          "0.0.0.0:${toString config.eigenix.finalSettings.ports.mempoolWeb}:8080"
         ];
         dependsOn = [ "mempool-api" ];
         extraOptions = [
@@ -116,8 +111,8 @@ in
           "bitcoind"
         ];
         volumes = [
-          "${cfg.baseDataDir}/mempool/cache:/backend/cache:rw"
-          "${cfg.baseDataDir}/bitcoind-data:/bitcoind-data:ro"
+          "${settings.storage.baseDataDir}/mempool/cache:/backend/cache:rw"
+          "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:ro"
         ];
         environment = {
           MEMPOOL_BACKEND = "electrum";
@@ -199,7 +194,7 @@ in
 
     # Firewall
     networking.firewall.allowedTCPPorts = [
-      config.services.eigenix-ports.mempoolWeb
+      config.eigenix.finalSettings.ports.mempoolWeb
     ];
 
     # Packages for management

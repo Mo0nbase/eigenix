@@ -38,6 +38,7 @@ with lib;
 
 let
   cfg = config.services.eigenix-asb;
+  settings = config.eigenix.finalSettings;
 
   # ASB config.toml content
   asbConfigToml = pkgs.writeText "asb-config.toml" ''
@@ -56,31 +57,31 @@ let
       "/dns4/aswap.click/tcp/8888/p2p/12D3KooWQzW52mdsLHTMu1EPiz3APumG6vGwpCuyy494MAQoEa5X",
       "/dns4/getxmr.st/tcp/8888/p2p/12D3KooWHHwiz6WDThPT8cEurstomg3kDSxzL2L8pwxfyX2fpxVk"
     ]
-    external_addresses = ${builtins.toJSON cfg.externalAddresses}
+    external_addresses = ${builtins.toJSON settings.asb.externalAddresses}
 
     [bitcoin]
     electrum_rpc_urls = ["tcp://electrs:50001"]
     target_block = 1
-    network = "Mainnet"
+    network = "${settings.networks.bitcoin}"
     use_mempool_space_fee_estimation = true
 
     [monero]
     daemon_url = "http://monerod:18081/"
-    network = "Mainnet"
+    network = "${settings.networks.monero}"
 
     [tor]
-    register_hidden_service = ${if cfg.enableTor then "true" else "false"}
+    register_hidden_service = ${if settings.asb.enableTor then "true" else "false"}
     hidden_service_num_intro_points = 5
 
     [maker]
-    min_buy_btc = ${toString cfg.minBuyBtc}
-    max_buy_btc = ${toString cfg.maxBuyBtc}
-    ask_spread = ${toString cfg.askSpread}
-    price_ticker_ws_url = "${cfg.priceTickerUrl}"
-    developer_tip = ${toString cfg.developerTip}
+    min_buy_btc = ${toString settings.asb.minBuyBtc}
+    max_buy_btc = ${toString settings.asb.maxBuyBtc}
+    ask_spread = ${toString settings.asb.askSpread}
+    price_ticker_ws_url = "${settings.asb.priceTickerUrl}"
+    developer_tip = ${toString settings.asb.developerTip}
     ${optionalString (
-      cfg.externalBitcoinAddress != null
-    ) ''external_bitcoin_address = "${cfg.externalBitcoinAddress}"''}
+      settings.asb.externalBitcoinAddress != null
+    ) ''external_bitcoin_address = "${settings.asb.externalBitcoinAddress}"''}
   '';
 
   asbConfigFile = asbConfigToml;
@@ -92,67 +93,6 @@ in
 {
   options.services.eigenix-asb = {
     enable = mkEnableOption "Automated Swap Backend (ASB) for XMR/BTC atomic swaps";
-
-    baseDataDir = mkOption {
-      type = types.str;
-      default = "/mnt/vault";
-      description = "Base directory for all persistent data (blockchains, wallets, logs)";
-    };
-
-    # Network options
-    externalAddresses = mkOption {
-      type = types.listOf types.str;
-      default = [ ];
-      example = [
-        "/dns4/swap.example.com/tcp/9939"
-        "/ip4/1.2.3.4/tcp/9939"
-      ];
-      description = "External multiaddresses for ASB discovery (libp2p format)";
-    };
-
-    enableTor = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Enable Tor hidden service for ASB";
-    };
-
-    # Maker parameters
-    minBuyBtc = mkOption {
-      type = types.float;
-      default = 0.002;
-      description = "Minimum BTC amount to accept per swap";
-    };
-
-    maxBuyBtc = mkOption {
-      type = types.float;
-      default = 0.02;
-      description = "Maximum BTC amount to accept per swap";
-    };
-
-    askSpread = mkOption {
-      type = types.float;
-      default = 0.02;
-      description = "Spread to add on top of exchange price (e.g., 0.02 = 2%)";
-    };
-
-    priceTickerUrl = mkOption {
-      type = types.str;
-      default = "wss://ws.kraken.com/";
-      description = "WebSocket URL for price ticker";
-    };
-
-    developerTip = mkOption {
-      type = types.float;
-      default = 0.0;
-      description = "Optional donation to project development (0.0 to 1.0, e.g., 0.02 = 2%)";
-    };
-
-    externalBitcoinAddress = mkOption {
-      type = types.nullOr types.str;
-      default = null;
-      example = "bc1qyouraddresshere";
-      description = "Fixed Bitcoin address for redeeming/punishing swaps (optional)";
-    };
   };
 
   config = mkIf cfg.enable {
@@ -185,38 +125,38 @@ in
     # Ensure data directories exist with secure permissions
     systemd.tmpfiles.rules = [
       # Main data directories - 700 to prevent unauthorized access
-      "d ${cfg.baseDataDir}/asb-data 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/bitcoind-data 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/electrs-data 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/monerod-data 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/bitcoind-data 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/electrs-data 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/monerod-data 0700 1000 1000 -"
 
       # ASB sensitive subdirectories
-      "d ${cfg.baseDataDir}/asb-data/wallet 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/monero 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/tor 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/tor/state 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/tor/cache 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/wallet 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/monero 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/tor 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/tor/state 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/tor/cache 0700 1000 1000 -"
 
       # ASB operational subdirectories (were previously 775/755)
-      "d ${cfg.baseDataDir}/asb-data/bitcoind 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/asb 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/monerod 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/electrs 0700 1000 1000 -"
-      "d ${cfg.baseDataDir}/asb-data/logs 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/bitcoind 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/asb 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/monerod 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/electrs 0700 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/asb-data/logs 0700 1000 1000 -"
 
       # ASB seed file - CRITICAL: 600 permissions (read/write owner only)
-      "f ${cfg.baseDataDir}/asb-data/seed.pem 0600 1000 1000 -"
+      "f ${settings.storage.baseDataDir}/asb-data/seed.pem 0600 1000 1000 -"
 
       # Recursively fix ownership and permissions on wallet directories
-      "Z ${cfg.baseDataDir}/asb-data/wallet 0700 1000 1000 -"
-      "Z ${cfg.baseDataDir}/asb-data/monero 0700 1000 1000 -"
+      "Z ${settings.storage.baseDataDir}/asb-data/wallet 0700 1000 1000 -"
+      "Z ${settings.storage.baseDataDir}/asb-data/monero 0700 1000 1000 -"
     ];
 
     # Containers
     virtualisation.oci-containers.containers."monerod" = {
       image = "ghcr.io/sethforprivacy/simple-monerod@sha256:f30e5706a335c384e4cf420215cbffd1196f0b3a11d4dd4e819fe3e0bca41ec5";
       volumes = [
-        "${cfg.baseDataDir}/monerod-data:/monerod-data:rw"
+        "${settings.storage.baseDataDir}/monerod-data:/monerod-data:rw"
       ];
       cmd = [
         "monerod"
@@ -252,7 +192,7 @@ in
     virtualisation.oci-containers.containers."bitcoind" = {
       image = "getumbrel/bitcoind@sha256:c565266ea302c9ab2fc490f04ff14e584210cde3d0d991b8309157e5dfae9e8d";
       volumes = [
-        "${cfg.baseDataDir}/bitcoind-data:/bitcoind-data:rw"
+        "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:rw"
       ];
       cmd = [
         "bitcoind"
@@ -293,8 +233,8 @@ in
     virtualisation.oci-containers.containers."electrs" = {
       image = "getumbrel/electrs@sha256:622657fbdc7331a69f5b3444e6f87867d51ac27d90c399c8bf25d9aab020052b";
       volumes = [
-        "${cfg.baseDataDir}/bitcoind-data:/bitcoind-data:ro"
-        "${cfg.baseDataDir}/electrs-data:/electrs-data:rw"
+        "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:ro"
+        "${settings.storage.baseDataDir}/electrs-data:/electrs-data:rw"
       ];
       cmd = [
         "electrs"
@@ -338,17 +278,17 @@ in
       image = "ghcr.io/eigenwallet/asb:latest";
       volumes = [
         "${asbConfigFile}:/asb-data/config.toml:ro"
-        "${cfg.baseDataDir}/asb-data:/asb-data:rw"
+        "${settings.storage.baseDataDir}/asb-data:/asb-data:rw"
       ];
       ports = [
-        "0.0.0.0:${toString config.services.eigenix-ports.asbP2p}:9939/tcp"
-        "127.0.0.1:${toString config.services.eigenix-ports.asbRpc}:${toString config.services.eigenix-ports.asbRpc}/tcp"
+        "0.0.0.0:${toString config.eigenix.finalSettings.ports.asbP2p}:9939/tcp"
+        "127.0.0.1:${toString config.eigenix.finalSettings.ports.asbRpc}:${toString config.eigenix.finalSettings.ports.asbRpc}/tcp"
       ];
       cmd = [
         "asb"
         "--config=/asb-data/config.toml"
         "start"
-        "--rpc-bind-port=${toString config.services.eigenix-ports.asbRpc}"
+        "--rpc-bind-port=${toString config.eigenix.finalSettings.ports.asbRpc}"
         "--rpc-bind-host=0.0.0.0"
       ];
       dependsOn = [
@@ -390,7 +330,7 @@ in
       image = "ghcr.io/eigenwallet/asb-controller:latest";
       cmd = [
         "asb-controller"
-        "--url=http://asb:${toString config.services.eigenix-ports.asbRpc}"
+        "--url=http://asb:${toString config.eigenix.finalSettings.ports.asbRpc}"
       ];
       dependsOn = [ "asb" ];
       extraOptions = [
@@ -418,7 +358,7 @@ in
     virtualisation.oci-containers.containers."asb-tracing-logger" = {
       image = "alpine@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1";
       volumes = [
-        "${cfg.baseDataDir}/asb-data:/asb-data:ro"
+        "${settings.storage.baseDataDir}/asb-data:/asb-data:ro"
       ];
       cmd = [
         "sh"
@@ -462,7 +402,7 @@ in
     };
 
     # Firewall for ASB
-    networking.firewall.allowedTCPPorts = [ config.services.eigenix-ports.asbP2p ];
+    networking.firewall.allowedTCPPorts = [ config.eigenix.finalSettings.ports.asbP2p ];
 
     # Root target
     systemd.targets."eigenix-root" = {

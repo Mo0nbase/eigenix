@@ -11,6 +11,7 @@ with lib;
 
 let
   cfg = config.services.eigenix-web;
+  settings = config.eigenix.finalSettings;
 in
 {
   options.services.eigenix-web = {
@@ -18,20 +19,8 @@ in
 
     package = mkOption {
       type = types.package;
-      default = pkgs.emptyDirectory; # Placeholder - will be replaced with actual build
+      default = pkgs.emptyDirectory;
       description = "The eigenix-web package to serve";
-    };
-
-    port = mkOption {
-      type = types.port;
-      default = config.services.eigenix-ports.eigenixWeb or 8080;
-      description = "Port to serve the web frontend on";
-    };
-
-    host = mkOption {
-      type = types.str;
-      default = "0.0.0.0";
-      description = "Host address to bind to";
     };
   };
 
@@ -45,7 +34,7 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString cfg.port} --bind ${cfg.host} --directory ${cfg.package}";
+        ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString settings.ports.eigenixWeb} --bind ${settings.web.host} --directory ${cfg.package}";
         Restart = "on-failure";
         RestartSec = "10s";
 
@@ -76,6 +65,6 @@ in
     };
 
     # Open firewall for web frontend
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    networking.firewall.allowedTCPPorts = [ settings.ports.eigenixWeb ];
   };
 }
