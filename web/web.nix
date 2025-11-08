@@ -79,10 +79,12 @@
           mkdir -p $out
 
           # Copy the bundled output from dx bundle
-          if [ -d "target/dx/eigenix-web/release/web/public" ]; then
-            cp -r target/dx/eigenix-web/release/web/public/* $out/
+          # dx uses the package name from Cargo.toml (which is "web")
+          if [ -d "target/dx/web/release/web/public" ]; then
+            cp -r target/dx/web/release/web/public/* $out/
           else
             echo "ERROR: dx bundle output directory not found"
+            ls -la target/dx/ || echo "target/dx does not exist"
             exit 1
           fi
           runHook postInstall

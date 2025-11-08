@@ -1,18 +1,20 @@
 [package]
-name = "eigenix-web"
+name = "web"
 version = "0.1.0"
-authors = ["Eigenix Contributors"]
+authors = ["Mo0nbase <gpggit.difficult148@passmail.net>"]
 edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 wasm-bindgen = "=0.2.104"
-dioxus = { version = "0.7.0-rc.3", features = ["web"] }
+dioxus = { version = "0.7.1", features = ["router"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 web-sys = { version = "=0.3.81", features = ["Window", "Storage"] }
 
 [features]
 default = ["web"]
-web = []
-desktop = []
-mobile = []
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
