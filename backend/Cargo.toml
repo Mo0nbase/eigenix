@@ -22,3 +22,7 @@ toml = "0.9.8"
 chrono = { version = "0.4", features = ["serde"] }
 hmac = "0.12"
 sha2 = "0.10"
+bitcoin = "0.32.7"
+bitcoincore-rpc = "0.19.0"
+monero = "0.21.0"
+monero-rpc = "0.5.0"
