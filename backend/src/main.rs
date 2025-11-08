@@ -13,8 +13,9 @@ use tracing_subscriber;
 
 mod config;
 mod db;
-mod exchanges;
 mod metrics;
+mod services;
+mod wallets;
 
 use config::{Cli, Config};
 use db::MetricsDatabase;
