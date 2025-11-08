@@ -70,9 +70,7 @@
           export HOME=$TMPDIR
 
           # Build the web package with dx bundle
-          cd web
           dx bundle --release
-          cd ..
           runHook postBuild
         '';
 
@@ -81,8 +79,8 @@
           mkdir -p $out
 
           # Copy the bundled output from dx bundle
-          if [ -d "web/target/dx/eigenix-web/release/web/public" ]; then
-            cp -r web/target/dx/eigenix-web/release/web/public/* $out/
+          if [ -d "target/dx/eigenix-web/release/web/public" ]; then
+            cp -r target/dx/eigenix-web/release/web/public/* $out/
           else
             echo "ERROR: dx bundle output directory not found"
             exit 1

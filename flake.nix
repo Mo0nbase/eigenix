@@ -15,9 +15,9 @@
       systems = import inputs.systems;
 
       imports = [
-        ./cli-module.nix
-        ./backend-module.nix
-        ./web-module.nix
+        ./cli/cli.nix
+        ./backend/backend.nix
+        ./web/web.nix
       ];
 
       perSystem =
