@@ -194,6 +194,10 @@ in
       volumes = [
         "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:rw"
       ];
+      ports = [
+        // TODO: close this later
+        "127.0.0.1:8332:8332/tcp"
+      ];
       cmd = [
         "bitcoind"
         "-chain=${bitcoinChain}"

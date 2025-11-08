@@ -35,6 +35,7 @@
         nativeBuildInputs = [
           pkgs.pkg-config
           rustToolchain
+          pkgs.gcc
         ];
 
         buildInputs = [
