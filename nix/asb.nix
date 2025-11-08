@@ -60,13 +60,13 @@ let
     external_addresses = ${builtins.toJSON settings.asb.externalAddresses}
 
     [bitcoin]
-    electrum_rpc_urls = ["tcp://electrs:50001"]
+    electrum_rpc_urls = ["tcp://electrs:${toString settings.ports.electrs}"]
     target_block = 1
     network = "${settings.networks.bitcoin}"
     use_mempool_space_fee_estimation = true
 
     [monero]
-    daemon_url = "http://monerod:18081/"
+    daemon_url = "http://monerod:${toString settings.ports.moneroRpc}/"
     network = "${settings.networks.monero}"
 
     [tor]
@@ -88,6 +88,9 @@ let
 
   bitcoinChain = "main";
   electrsNetwork = "bitcoin";
+
+  # Comment updated to reflect new network name
+  # Network subnet: eigenix-network uses 10.89.0.0/24
 
 in
 {
@@ -159,7 +162,7 @@ in
         "${settings.storage.baseDataDir}/monerod-data:/monerod-data:rw"
       ];
       ports = [
-        "127.0.0.1:18081:18081/tcp"
+        "127.0.0.1:${toString settings.ports.moneroRpc}:18081/tcp"
       ];
       cmd = [
         "monerod"
@@ -175,7 +178,7 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=monerod"
-        "--network=asb-network"
+        "--network=eigenix-network"
         # Resource limits for security
         "--memory=4g"
         "--cpus=2.0"
@@ -186,8 +189,8 @@ in
     };
     systemd.services."podman-monerod" = {
       serviceConfig.Restart = lib.mkOverride 90 "always";
-      after = [ "podman-network-asb.service" ];
-      requires = [ "podman-network-asb.service" ];
+      after = [ "podman-network-eigenix.service" ];
+      requires = [ "podman-network-eigenix.service" ];
       partOf = [ "eigenix-root.target" ];
       wantedBy = [ "eigenix-root.target" ];
     };
@@ -198,16 +201,15 @@ in
         "${settings.storage.baseDataDir}/bitcoind-data:/bitcoind-data:rw"
       ];
       ports = [
-        # TODO: close this later
-        "127.0.0.1:8332:8332/tcp"
+        "127.0.0.1:${toString settings.ports.bitcoinRpc}:8332/tcp"
       ];
       cmd = [
         "bitcoind"
         "-chain=${bitcoinChain}"
         "-rpcallowip=127.0.0.1"
-        # Restrict to container network subnet only (asb-network: 10.89.0.0/24)
+        # Restrict to container network subnet only (eigenix-network: 10.89.0.0/24)
         "-rpcallowip=10.89.0.0/24"
-        "-rpcbind=0.0.0.0:8332"
+        "-rpcbind=0.0.0.0:${toString settings.ports.bitcoinRpc}"
         "-bind=0.0.0.0:8333"
         "-datadir=/bitcoind-data/"
         "-dbcache=16384"
@@ -219,7 +221,7 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=bitcoind"
-        "--network=asb-network"
+        "--network=eigenix-network"
         # Resource limits for security
         "--memory=8g"
         "--cpus=4.0"
@@ -231,8 +233,8 @@ in
     };
     systemd.services."podman-bitcoind" = {
       serviceConfig.Restart = lib.mkOverride 90 "always";
-      after = [ "podman-network-asb.service" ];
-      requires = [ "podman-network-asb.service" ];
+      after = [ "podman-network-eigenix.service" ];
+      requires = [ "podman-network-eigenix.service" ];
       partOf = [ "eigenix-root.target" ];
       wantedBy = [ "eigenix-root.target" ];
     };
@@ -248,9 +250,9 @@ in
         "--network=${electrsNetwork}"
         "--daemon-dir=/bitcoind-data/"
         "--db-dir=/electrs-data/db"
-        "--daemon-rpc-addr=bitcoind:8332"
+        "--daemon-rpc-addr=bitcoind:${toString settings.ports.bitcoinRpc}"
         "--daemon-p2p-addr=bitcoind:8333"
-        "--electrum-rpc-addr=0.0.0.0:50001"
+        "--electrum-rpc-addr=0.0.0.0:${toString settings.ports.electrs}"
         "--log-filters=INFO"
       ];
       dependsOn = [ "bitcoind" ];
@@ -258,7 +260,7 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=electrs"
-        "--network=asb-network"
+        "--network=eigenix-network"
         # Resource limits for security
         "--memory=4g"
         "--cpus=2.0"
@@ -270,11 +272,11 @@ in
     systemd.services."podman-electrs" = {
       serviceConfig.Restart = lib.mkOverride 90 "always";
       after = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-bitcoind.service"
       ];
       requires = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-bitcoind.service"
       ];
       partOf = [ "eigenix-root.target" ];
@@ -306,7 +308,7 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=asb"
-        "--network=asb-network"
+        "--network=eigenix-network"
         # Resource limits for security
         "--memory=2g"
         "--cpus=2.0"
@@ -320,12 +322,12 @@ in
         Restart = lib.mkOverride 90 "always";
       };
       after = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-electrs.service"
         "podman-monerod.service"
       ];
       requires = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-electrs.service"
         "podman-monerod.service"
       ];
@@ -343,7 +345,7 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=asb-controller"
-        "--network=asb-network"
+        "--network=eigenix-network"
         "--tty"
         "--interactive"
       ];
@@ -351,11 +353,11 @@ in
     systemd.services."podman-asb-controller" = {
       serviceConfig.Restart = lib.mkOverride 90 "always";
       after = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-asb.service"
       ];
       requires = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-asb.service"
       ];
       partOf = [ "eigenix-root.target" ];
@@ -376,17 +378,17 @@ in
       extraOptions = [
         "--entrypoint=[]"
         "--network-alias=asb-tracing-logger"
-        "--network=asb-network"
+        "--network=eigenix-network"
       ];
     };
     systemd.services."podman-asb-tracing-logger" = {
       serviceConfig.Restart = lib.mkOverride 90 "always";
       after = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-asb.service"
       ];
       requires = [
-        "podman-network-asb.service"
+        "podman-network-eigenix.service"
         "podman-asb.service"
       ];
       partOf = [ "eigenix-root.target" ];
@@ -394,21 +396,24 @@ in
     };
 
     # Network
-    systemd.services."podman-network-asb" = {
+    systemd.services."podman-network-eigenix" = {
       path = [ pkgs.podman ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStop = "podman network rm -f asb-network";
+        ExecStop = "podman network rm -f eigenix-network";
       };
       script = ''
-        podman network inspect asb-network || podman network create asb-network
+        podman network inspect eigenix-network || podman network create eigenix-network
       '';
       partOf = [ "eigenix-root.target" ];
       wantedBy = [ "eigenix-root.target" ];
     };
 
-    # Firewall for ASB
-    networking.firewall.allowedTCPPorts = [ config.eigenix.finalSettings.ports.asbP2p ];
+    # Firewall for ASB - Only allow P2P port for external access
+    # ASB RPC port is bound to localhost only for internal use
+    networking.firewall.allowedTCPPorts = [
+      config.eigenix.finalSettings.ports.asbP2p
+    ];
   };
 }

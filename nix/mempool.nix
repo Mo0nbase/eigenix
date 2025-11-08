@@ -71,7 +71,7 @@ in
         };
         extraOptions = [
           "--network-alias=mempool-db"
-          "--network=asb-network"
+          "--network=eigenix-network"
           # Resource limits for security
           "--memory=2g"
           "--cpus=2.0"
@@ -94,7 +94,7 @@ in
         dependsOn = [ "mempool-api" ];
         extraOptions = [
           "--network-alias=mempool-web"
-          "--network=asb-network"
+          "--network=eigenix-network"
           # Resource limits for security
           "--memory=512m"
           "--cpus=1.0"
@@ -117,10 +117,10 @@ in
         environment = {
           MEMPOOL_BACKEND = "electrum";
           ELECTRUM_HOST = "electrs";
-          ELECTRUM_PORT = "50001";
+          ELECTRUM_PORT = toString settings.ports.electrs;
           ELECTRUM_TLS_ENABLED = "false";
           CORE_RPC_HOST = "bitcoind";
-          CORE_RPC_PORT = "8332";
+          CORE_RPC_PORT = toString settings.ports.bitcoinRpc;
           CORE_RPC_COOKIE = "true";
           CORE_RPC_COOKIE_PATH = "/bitcoind-data/.cookie";
           DATABASE_ENABLED = "true";
@@ -133,7 +133,7 @@ in
         user = "1000:1000";
         extraOptions = [
           "--network-alias=mempool-api"
-          "--network=asb-network"
+          "--network=eigenix-network"
           # Resource limits for security
           "--memory=2g"
           "--cpus=2.0"
@@ -149,10 +149,10 @@ in
       "podman-mempool-db" = {
         serviceConfig.Restart = lib.mkOverride 90 "always";
         after = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
         ];
         requires = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
         ];
         partOf = [ "eigenix-root.target" ];
         wantedBy = [ "eigenix-root.target" ];
@@ -161,11 +161,11 @@ in
       "podman-mempool-api" = {
         serviceConfig.Restart = lib.mkOverride 90 "always";
         after = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
           "podman-mempool-db.service"
         ];
         requires = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
           "podman-mempool-db.service"
         ];
         # Make this optional - don't fail if bitcoind/electrs aren't available
@@ -180,11 +180,11 @@ in
       "podman-mempool-web" = {
         serviceConfig.Restart = lib.mkOverride 90 "always";
         after = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
           "podman-mempool-api.service"
         ];
         requires = [
-          "podman-network-asb.service"
+          "podman-network-eigenix.service"
           "podman-mempool-api.service"
         ];
         partOf = [ "eigenix-root.target" ];

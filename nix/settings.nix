@@ -147,16 +147,38 @@ in
             description = "Enable mempool explorer";
           };
 
-          backend.enable = mkOption {
-            type = types.bool;
-            default = false;
-            description = "Enable backend API";
+          backend = {
+            enable = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Enable backend API";
+            };
+
+            host = mkOption {
+              type = types.str;
+              default = "0.0.0.0";
+              description = "Backend bind address (use 0.0.0.0 for external access)";
+            };
+
+            logLevel = mkOption {
+              type = types.str;
+              default = "info";
+              description = "Backend log level";
+            };
           };
 
-          web.enable = mkOption {
-            type = types.bool;
-            default = false;
-            description = "Enable web frontend";
+          web = {
+            enable = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Enable web frontend";
+            };
+
+            host = mkOption {
+              type = types.str;
+              default = "0.0.0.0";
+              description = "Web frontend bind address (use 0.0.0.0 for external access)";
+            };
           };
 
           ports = {
@@ -188,6 +210,30 @@ in
               type = types.port;
               default = 3000;
               description = "Eigenix backend port";
+            };
+
+            surrealdb = mkOption {
+              type = types.port;
+              default = 8000;
+              description = "SurrealDB port (internal only)";
+            };
+
+            bitcoinRpc = mkOption {
+              type = types.port;
+              default = 8332;
+              description = "Bitcoin RPC port (internal only)";
+            };
+
+            moneroRpc = mkOption {
+              type = types.port;
+              default = 18081;
+              description = "Monero RPC port (internal only)";
+            };
+
+            electrs = mkOption {
+              type = types.port;
+              default = 50001;
+              description = "Electrs RPC port (internal only)";
             };
           };
         };
@@ -254,6 +300,10 @@ in
               mempoolWeb
               eigenixWeb
               eigenixBackend
+              surrealdb
+              bitcoinRpc
+              moneroRpc
+              electrs
             ];
             unique = lib.unique ports;
           in
