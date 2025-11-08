@@ -214,8 +214,8 @@ in
 
             surrealdb = mkOption {
               type = types.port;
-              default = 8000;
-              description = "SurrealDB port (internal only)";
+              default = 8001;
+              description = "SurrealDB port";
             };
 
             bitcoinRpc = mkOption {

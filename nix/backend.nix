@@ -56,7 +56,7 @@ in
         "${settings.storage.baseDataDir}/surrealdb:/data:rw,Z"
       ];
       ports = [
-        "127.0.0.1:${toString settings.ports.surrealdb}:8000/tcp"
+        "0.0.0.0:${toString settings.ports.surrealdb}:8000/tcp"
       ];
       cmd = [
         "start"
@@ -143,11 +143,15 @@ in
       };
     };
 
-    # Only open firewall if binding to non-localhost
-    networking.firewall.allowedTCPPorts =
-      mkIf (settings.backend.host != "127.0.0.1" && settings.backend.host != "localhost")
-        [
-          settings.ports.eigenixBackend
-        ];
+    # Open firewall for backend and SurrealDB
+    networking.firewall.allowedTCPPorts = [
+      settings.ports.surrealdb
+    ]
+    ++ (
+      if (settings.backend.host != "127.0.0.1" && settings.backend.host != "localhost") then
+        [ settings.ports.eigenixBackend ]
+      else
+        [ ]
+    );
   };
 }
