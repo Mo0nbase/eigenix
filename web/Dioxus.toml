@@ -1,0 +1,13 @@
+[application]
+name = "eigenix-web"
+default_platform = "web"
+
+[web.app]
+title = "Eigenix"
+base_path = "/"
+
+[web.watcher]
+
+[web.resource]
+
+[web.resource.dev]
