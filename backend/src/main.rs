@@ -1,10 +1,14 @@
-use axum::{routing::get, Json, Router};
+use axum::{extract::State, routing::get, Json, Router};
+use clap::Parser;
 use serde::Serialize;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber;
 
+mod config;
 mod metrics;
+
+use config::{Cli, Config};
 
 #[derive(Serialize)]
 struct Health {
@@ -19,12 +23,12 @@ async fn health() -> Json<Health> {
     })
 }
 
-async fn bitcoin_metrics() -> Result<Json<metrics::BitcoinMetrics>, String> {
-    let client = metrics::BitcoinRpcClient::new(
-        "http://127.0.0.1:8332".to_string(),
-        "/mnt/vault/bitcoind-data/.cookie",
-    )
-    .map_err(|e| format!("Failed to create Bitcoin RPC client: {}", e))?;
+async fn bitcoin_metrics(
+    State(config): State<Arc<Config>>,
+) -> Result<Json<metrics::BitcoinMetrics>, String> {
+    let client =
+        metrics::BitcoinRpcClient::new(config.bitcoin.rpc_url.clone(), &config.bitcoin.cookie_path)
+            .map_err(|e| format!("Failed to create Bitcoin RPC client: {}", e))?;
 
     let metrics = client
         .get_metrics()
@@ -34,8 +38,10 @@ async fn bitcoin_metrics() -> Result<Json<metrics::BitcoinMetrics>, String> {
     Ok(Json(metrics))
 }
 
-async fn monero_metrics() -> Result<Json<metrics::MoneroMetrics>, String> {
-    let client = metrics::MoneroRpcClient::new("http://127.0.0.1:18081/json_rpc".to_string());
+async fn monero_metrics(
+    State(config): State<Arc<Config>>,
+) -> Result<Json<metrics::MoneroMetrics>, String> {
+    let client = metrics::MoneroRpcClient::new(config.monero.rpc_url.clone());
 
     let metrics = client
         .get_metrics()
@@ -45,8 +51,10 @@ async fn monero_metrics() -> Result<Json<metrics::MoneroMetrics>, String> {
     Ok(Json(metrics))
 }
 
-async fn asb_metrics() -> Result<Json<metrics::AsbMetrics>, String> {
-    let client = metrics::AsbRpcClient::new("http://127.0.0.1:9944".to_string());
+async fn asb_metrics(
+    State(config): State<Arc<Config>>,
+) -> Result<Json<metrics::AsbMetrics>, String> {
+    let client = metrics::AsbRpcClient::new(config.asb.rpc_url.clone());
 
     let metrics = client
         .get_metrics()
@@ -67,12 +75,14 @@ async fn electrs_metrics() -> Result<Json<metrics::ElectrsMetrics>, String> {
     Ok(Json(metrics))
 }
 
-async fn container_metrics() -> Result<Json<Vec<metrics::ContainerMetrics>>, String> {
+async fn container_metrics(
+    State(config): State<Arc<Config>>,
+) -> Result<Json<Vec<metrics::ContainerMetrics>>, String> {
     let client = metrics::ContainerHealthClient::new();
-    let containers = vec!["bitcoind", "electrs", "monerod", "asb", "asb-controller"];
+    let container_refs: Vec<&str> = config.containers.names.iter().map(|s| s.as_str()).collect();
 
     let metrics = client
-        .get_metrics(&containers)
+        .get_metrics(&container_refs)
         .await
         .map_err(|e| format!("Failed to get container metrics: {}", e))?;
 
@@ -87,6 +97,13 @@ async fn main() -> anyhow::Result<()> {
         .compact()
         .init();
 
+    // Parse CLI arguments and load configuration
+    let cli = Cli::parse();
+    let config = Config::load(cli)?;
+    let config = Arc::new(config);
+
+    tracing::info!("Configuration loaded: {:?}", config);
+
     // Build our application with routes
     let app = Router::new()
         .route("/health", get(health))
@@ -95,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/metrics/asb", get(asb_metrics))
         .route("/metrics/electrs", get(electrs_metrics))
         .route("/metrics/containers", get(container_metrics))
+        .with_state(config.clone())
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
@@ -103,7 +121,10 @@ async fn main() -> anyhow::Result<()> {
         );
 
     // Run it
-    let addr = SocketAddr::from(([127, 0, 0, 1], 1234));
+    let addr = SocketAddr::from((
+        config.server.host.parse::<std::net::IpAddr>()?,
+        config.server.port,
+    ));
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
