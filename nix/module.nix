@@ -6,6 +6,7 @@
   config,
   lib,
   pkgs,
+  eigenixPackages ? null,
   ...
 }:
 
@@ -50,8 +51,14 @@ in
     # Enable individual services based on settings
     services.eigenix-asb.enable = settings.asb.enable;
     services.eigenix-mempool.enable = settings.mempool.enable;
-    services.eigenix-backend.enable = settings.backend.enable;
-    services.eigenix-web.enable = settings.web.enable;
+    services.eigenix-backend = {
+      enable = settings.backend.enable;
+      package = mkIf (eigenixPackages != null) eigenixPackages.eigenix-backend;
+    };
+    services.eigenix-web = {
+      enable = settings.web.enable;
+      package = mkIf (eigenixPackages != null) eigenixPackages.eigenix-web;
+    };
 
     # Root systemd target for managing all eigenix services
     systemd.targets."eigenix-root" = {

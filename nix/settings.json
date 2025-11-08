@@ -1,140 +1,137 @@
 {
-  "deployment": {
-    "name": "eigenix",
-    "environment": "production",
-    "domain": null
-  },
-  "storage": {
-    "baseDataDir": "/mnt/vault",
-    "bitcoindDataDir": "/mnt/vault/bitcoind-data",
-    "monerodDataDir": "/mnt/vault/monerod-data",
-    "asbDataDir": "/mnt/vault/asb-data",
-    "mempoolDataDir": "/mnt/vault/mempool"
-  },
-  "networks": {
-    "bitcoin": "Mainnet",
-    "monero": "Mainnet"
-  },
-  "asb": {
-    "enable": true,
-    "externalAddresses": [],
-    "enableTor": true,
-    "torIntroPoints": 5,
-    "minBuyBtc": 0.002,
-    "maxBuyBtc": 0.02,
-    "askSpread": 0.02,
-    "priceTickerUrl": "wss://ws.kraken.com/",
-    "externalBitcoinAddress": null,
-    "developerTip": 0.0,
-    "rendezvousPoints": [
-      "/dns4/discover.unstoppableswap.net/tcp/8888/p2p/12D3KooWA6cnqJpVnreBVnoro8midDL9Lpzmg8oJPoAGi7YYaamE",
-      "/dns4/discover2.unstoppableswap.net/tcp/8888/p2p/12D3KooWGRvf7qVQDrNR5nfYD6rKrbgeTi9x8RrbdxbmsPvxL4mw",
-      "/dns4/darkness.su/tcp/8888/p2p/12D3KooWFQAgVVS9t9UgL6v1sLprJVM7am5hFK7vy9iBCCoCBYmU",
-      "/dns4/eigen.center/tcp/8888/p2p/12D3KooWS5RaYJt4ANKMH4zczGVhNcw5W214e2DDYXnjs5Mx5zAT",
-      "/dns4/swapanarchy.cfd/tcp/8888/p2p/12D3KooWRtyVpmyvwzPYXuWyakFbRKhyXGrjhq6tP7RrBofpgQGp",
-      "/dns4/rendezvous.observer/tcp/8888/p2p/12D3KooWMjceGXrYuGuDMGrfmJxALnSDbK4km6s1i1sJEgDTgGQa",
-      "/dns4/aswap.click/tcp/8888/p2p/12D3KooWQzW52mdsLHTMu1EPiz3APumG6vGwpCuyy494MAQoEa5X",
-      "/dns4/getxmr.st/tcp/8888/p2p/12D3KooWHHwiz6WDThPT8cEurstomg3kDSxzL2L8pwxfyX2fpxVk"
-    ]
-  },
-  "bitcoin": {
-    "enable": true,
-    "prune": false,
-    "txindex": true,
-    "dbcache": 16384,
-    "maxconnections": 125,
-    "rpcallowip": [
-      "127.0.0.1",
-      "10.89.0.0/24"
-    ]
-  },
-  "monero": {
-    "enable": true,
-    "restrictedRpc": true,
-    "enableDnsBlocklist": true,
-    "maxIncomingConnections": 64,
-    "maxOutgoingConnections": 64
-  },
-  "electrs": {
-    "enable": true,
-    "logFilters": "INFO"
-  },
-  "mempool": {
-    "enable": true,
-    "enableStatistics": true,
-    "backend": "electrum",
-    "database": {
-      "name": "mempool",
-      "user": "mempool",
-      "password": "mempool",
-      "rootPassword": "admin"
-    }
-  },
-  "backend": {
-    "enable": false,
-    "host": "127.0.0.1",
-    "logLevel": "info"
-  },
-  "web": {
-    "enable": false,
-    "host": "0.0.0.0"
-  },
-  "ports": {
-    "asbP2p": 9939,
-    "asbRpc": 9944,
-    "bitcoinRpc": 8332,
-    "bitcoinP2p": 8333,
-    "electrs": 50001,
-    "moneroRpc": 18081,
-    "moneroP2p": 18080,
-    "mempoolWeb": 8999,
-    "mempoolApi": 8998,
-    "eigenixWeb": 8080,
-    "eigenixBackend": 3000
-  },
-  "resources": {
-    "bitcoind": {
-      "memory": "8g",
-      "cpus": "4.0"
+    "deployment": {
+        "name": "eigenix",
+        "environment": "production",
+        "domain": null
     },
-    "monerod": {
-      "memory": "4g",
-      "cpus": "2.0"
+    "storage": {
+        "baseDataDir": "/mnt/vault",
+        "bitcoindDataDir": "/mnt/vault/bitcoind-data",
+        "monerodDataDir": "/mnt/vault/monerod-data",
+        "asbDataDir": "/mnt/vault/asb-data",
+        "mempoolDataDir": "/mnt/vault/mempool"
     },
-    "electrs": {
-      "memory": "4g",
-      "cpus": "2.0"
+    "networks": {
+        "bitcoin": "Mainnet",
+        "monero": "Mainnet"
     },
     "asb": {
-      "memory": "2g",
-      "cpus": "2.0"
+        "enable": true,
+        "externalAddresses": [],
+        "enableTor": true,
+        "torIntroPoints": 5,
+        "minBuyBtc": 0.002,
+        "maxBuyBtc": 0.02,
+        "askSpread": 0.02,
+        "priceTickerUrl": "wss://ws.kraken.com/",
+        "externalBitcoinAddress": null,
+        "developerTip": 0.0,
+        "rendezvousPoints": [
+            "/dns4/discover.unstoppableswap.net/tcp/8888/p2p/12D3KooWA6cnqJpVnreBVnoro8midDL9Lpzmg8oJPoAGi7YYaamE",
+            "/dns4/discover2.unstoppableswap.net/tcp/8888/p2p/12D3KooWGRvf7qVQDrNR5nfYD6rKrbgeTi9x8RrbdxbmsPvxL4mw",
+            "/dns4/darkness.su/tcp/8888/p2p/12D3KooWFQAgVVS9t9UgL6v1sLprJVM7am5hFK7vy9iBCCoCBYmU",
+            "/dns4/eigen.center/tcp/8888/p2p/12D3KooWS5RaYJt4ANKMH4zczGVhNcw5W214e2DDYXnjs5Mx5zAT",
+            "/dns4/swapanarchy.cfd/tcp/8888/p2p/12D3KooWRtyVpmyvwzPYXuWyakFbRKhyXGrjhq6tP7RrBofpgQGp",
+            "/dns4/rendezvous.observer/tcp/8888/p2p/12D3KooWMjceGXrYuGuDMGrfmJxALnSDbK4km6s1i1sJEgDTgGQa",
+            "/dns4/aswap.click/tcp/8888/p2p/12D3KooWQzW52mdsLHTMu1EPiz3APumG6vGwpCuyy494MAQoEa5X",
+            "/dns4/getxmr.st/tcp/8888/p2p/12D3KooWHHwiz6WDThPT8cEurstomg3kDSxzL2L8pwxfyX2fpxVk"
+        ]
     },
-    "mempoolDb": {
-      "memory": "2g",
-      "cpus": "2.0"
+    "bitcoin": {
+        "enable": true,
+        "prune": false,
+        "txindex": true,
+        "dbcache": 16384,
+        "maxconnections": 125,
+        "rpcallowip": ["127.0.0.1", "10.89.0.0/24"]
     },
-    "mempoolApi": {
-      "memory": "2g",
-      "cpus": "2.0"
+    "monero": {
+        "enable": true,
+        "restrictedRpc": true,
+        "enableDnsBlocklist": true,
+        "maxIncomingConnections": 64,
+        "maxOutgoingConnections": 64
     },
-    "mempoolWeb": {
-      "memory": "512m",
-      "cpus": "1.0"
+    "electrs": {
+        "enable": true,
+        "logFilters": "INFO"
+    },
+    "mempool": {
+        "enable": true,
+        "enableStatistics": true,
+        "backend": "electrum",
+        "database": {
+            "name": "mempool",
+            "user": "mempool",
+            "password": "mempool",
+            "rootPassword": "admin"
+        }
+    },
+    "backend": {
+        "enable": true,
+        "host": "127.0.0.1",
+        "logLevel": "info"
+    },
+    "web": {
+        "enable": true,
+        "host": "0.0.0.0"
+    },
+    "ports": {
+        "asbP2p": 9939,
+        "asbRpc": 9944,
+        "bitcoinRpc": 8332,
+        "bitcoinP2p": 8333,
+        "electrs": 50001,
+        "moneroRpc": 18081,
+        "moneroP2p": 18080,
+        "mempoolWeb": 8999,
+        "mempoolApi": 8998,
+        "eigenixWeb": 8080,
+        "eigenixBackend": 3000
+    },
+    "resources": {
+        "bitcoind": {
+            "memory": "8g",
+            "cpus": "4.0"
+        },
+        "monerod": {
+            "memory": "4g",
+            "cpus": "2.0"
+        },
+        "electrs": {
+            "memory": "4g",
+            "cpus": "2.0"
+        },
+        "asb": {
+            "memory": "2g",
+            "cpus": "2.0"
+        },
+        "mempoolDb": {
+            "memory": "2g",
+            "cpus": "2.0"
+        },
+        "mempoolApi": {
+            "memory": "2g",
+            "cpus": "2.0"
+        },
+        "mempoolWeb": {
+            "memory": "512m",
+            "cpus": "1.0"
+        }
+    },
+    "images": {
+        "asb": "ghcr.io/eigenwallet/asb:latest",
+        "asbController": "ghcr.io/eigenwallet/asb-controller:latest",
+        "bitcoind": "getumbrel/bitcoind@sha256:c565266ea302c9ab2fc490f04ff14e584210cde3d0d991b8309157e5dfae9e8d",
+        "monerod": "ghcr.io/sethforprivacy/simple-monerod@sha256:f30e5706a335c384e4cf420215cbffd1196f0b3a11d4dd4e819fe3e0bca41ec5",
+        "electrs": "getumbrel/electrs@sha256:622657fbdc7331a69f5b3444e6f87867d51ac27d90c399c8bf25d9aab020052b",
+        "mempoolDb": "mariadb@sha256:9e7695800ab8fa72d75053fe536b090d0c9373465b32a073c73bc7940a2e8dbe",
+        "mempoolWeb": "mempool/frontend@sha256:1f33796b56bb661ac7b417d11d6c44c467f51c808ea3c48748a2428e1bed918c",
+        "mempoolApi": "mempool/backend@sha256:edc4cc7b27b8d6267abb74f76b80dd0258803377d7a60fd1d050c4786369d15a"
+    },
+    "monitoring": {
+        "enableMetrics": false,
+        "enableTracing": true,
+        "logRetentionDays": 30
     }
-  },
-  "images": {
-    "asb": "ghcr.io/eigenwallet/asb:latest",
-    "asbController": "ghcr.io/eigenwallet/asb-controller:latest",
-    "bitcoind": "getumbrel/bitcoind@sha256:c565266ea302c9ab2fc490f04ff14e584210cde3d0d991b8309157e5dfae9e8d",
-    "monerod": "ghcr.io/sethforprivacy/simple-monerod@sha256:f30e5706a335c384e4cf420215cbffd1196f0b3a11d4dd4e819fe3e0bca41ec5",
-    "electrs": "getumbrel/electrs@sha256:622657fbdc7331a69f5b3444e6f87867d51ac27d90c399c8bf25d9aab020052b",
-    "mempoolDb": "mariadb@sha256:9e7695800ab8fa72d75053fe536b090d0c9373465b32a073c73bc7940a2e8dbe",
-    "mempoolWeb": "mempool/frontend@sha256:1f33796b56bb661ac7b417d11d6c44c467f51c808ea3c48748a2428e1bed918c",
-    "mempoolApi": "mempool/backend@sha256:edc4cc7b27b8d6267abb74f76b80dd0258803377d7a60fd1d050c4786369d15a"
-  },
-  "monitoring": {
-    "enableMetrics": false,
-    "enableTracing": true,
-    "logRetentionDays": 30
-  }
 }

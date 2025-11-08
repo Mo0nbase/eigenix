@@ -207,11 +207,12 @@ in
     };
 
     # Computed final settings (merge JSON + Nix config)
+    # JSON values take precedence over Nix defaults, but explicit Nix config overrides JSON
     finalSettings = mkOption {
       type = types.attrs;
       internal = true;
       readOnly = true;
-      default = recursiveUpdate userConfig cfg.settings;
+      default = recursiveUpdate cfg.settings userConfig;
       description = "Final merged settings from JSON and Nix config";
     };
 

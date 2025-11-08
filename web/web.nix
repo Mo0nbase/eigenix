@@ -96,8 +96,8 @@
         };
       };
 
-      devShells.default = pkgs.mkShell {
-        name = "eigenix-dev";
+      devShells.eigenix-web = pkgs.mkShell {
+        name = "eigenix-web-dev";
         buildInputs = rustBuildInputs;
         nativeBuildInputs = [
           rustToolchain
