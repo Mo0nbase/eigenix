@@ -34,3 +34,6 @@ bitcoin = "0.32.7"
 bitcoincore-rpc = "0.19.0"
 monero = "0.21.0"
 monero-rpc = "0.5.0"
+
+[dev-dependencies]
+dotenvy = "0.15"
