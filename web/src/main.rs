@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -27,6 +28,7 @@ fn App() -> Element {
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
+        document::Script { src: "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" }
         Router::<Route> {}
     }
 }
@@ -272,19 +274,174 @@ fn Metrics() -> Element {
                 }
 
                 match bitcoin_data.read().as_ref() {
-                    Some(Some(data)) => rsx! {
-                        pre {
-                            style: "background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto;",
-                            {data.iter().map(|metric| {
-                                let mut fields = Vec::new();
-                                fields.push(format!("  \"timestamp\": \"{}\"", metric.timestamp));
-                                if show_btc_blocks() { fields.push(format!("  \"blocks\": {}", metric.blocks)); }
-                                if show_btc_headers() { fields.push(format!("  \"headers\": {}", metric.headers)); }
-                                if show_btc_verification() { fields.push(format!("  \"verification_progress\": {}", metric.verification_progress)); }
-                                if show_btc_size() { fields.push(format!("  \"size_on_disk\": {}", metric.size_on_disk)); }
-                                if show_btc_balance() { fields.push(format!("  \"wallet_balance\": {:?}", metric.wallet_balance)); }
-                                format!("{{\n{}\n}}", fields.join(",\n"))
-                            }).collect::<Vec<_>>().join(",\n")}
+                    Some(Some(data)) => {
+                        let timestamps: Vec<String> = data.iter().map(|m| m.timestamp.clone()).collect();
+                        let labels_json = serde_json::to_string(&timestamps).unwrap_or_default();
+
+                        rsx! {
+                            div {
+                                if show_btc_blocks() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.blocks).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Blocks" }
+                                            canvas { id: "btc-blocks-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('btc-blocks-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.btcBlocksChart) window.btcBlocksChart.destroy();
+                                                            window.btcBlocksChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Blocks', data: {values_json}, borderColor: 'rgb(75, 192, 192)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_btc_headers() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.headers).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Headers" }
+                                            canvas { id: "btc-headers-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('btc-headers-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.btcHeadersChart) window.btcHeadersChart.destroy();
+                                                            window.btcHeadersChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Headers', data: {values_json}, borderColor: 'rgb(255, 99, 132)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_btc_verification() {
+                                    {
+                                        let values: Vec<f64> = data.iter().map(|m| m.verification_progress).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Verification Progress" }
+                                            canvas { id: "btc-verification-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('btc-verification-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.btcVerificationChart) window.btcVerificationChart.destroy();
+                                                            window.btcVerificationChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Verification Progress', data: {values_json}, borderColor: 'rgb(255, 205, 86)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_btc_size() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.size_on_disk).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Size on Disk" }
+                                            canvas { id: "btc-size-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('btc-size-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.btcSizeChart) window.btcSizeChart.destroy();
+                                                            window.btcSizeChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Size on Disk', data: {values_json}, borderColor: 'rgb(153, 102, 255)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_btc_balance() {
+                                    {
+                                        let values: Vec<Option<f64>> = data.iter().map(|m| m.wallet_balance).collect();
+                                        let values_clean: Vec<f64> = values.iter().filter_map(|v| *v).collect();
+                                        let values_json = serde_json::to_string(&values_clean).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Wallet Balance" }
+                                            canvas { id: "btc-balance-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('btc-balance-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.btcBalanceChart) window.btcBalanceChart.destroy();
+                                                            window.btcBalanceChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Wallet Balance', data: {values_json}, borderColor: 'rgb(255, 159, 64)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: true }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     Some(None) => rsx! { p { "Failed to load Bitcoin metrics" } },
@@ -308,19 +465,174 @@ fn Metrics() -> Element {
                 }
 
                 match monero_data.read().as_ref() {
-                    Some(Some(data)) => rsx! {
-                        pre {
-                            style: "background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto;",
-                            {data.iter().map(|metric| {
-                                let mut fields = Vec::new();
-                                fields.push(format!("  \"timestamp\": \"{}\"", metric.timestamp));
-                                if show_xmr_height() { fields.push(format!("  \"height\": {}", metric.height)); }
-                                if show_xmr_target_height() { fields.push(format!("  \"target_height\": {}", metric.target_height)); }
-                                if show_xmr_difficulty() { fields.push(format!("  \"difficulty\": {}", metric.difficulty)); }
-                                if show_xmr_tx_count() { fields.push(format!("  \"tx_count\": {}", metric.tx_count)); }
-                                if show_xmr_balance() { fields.push(format!("  \"wallet_balance\": {:?}", metric.wallet_balance)); }
-                                format!("{{\n{}\n}}", fields.join(",\n"))
-                            }).collect::<Vec<_>>().join(",\n")}
+                    Some(Some(data)) => {
+                        let timestamps: Vec<String> = data.iter().map(|m| m.timestamp.clone()).collect();
+                        let labels_json = serde_json::to_string(&timestamps).unwrap_or_default();
+
+                        rsx! {
+                            div {
+                                if show_xmr_height() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.height).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Height" }
+                                            canvas { id: "xmr-height-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('xmr-height-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.xmrHeightChart) window.xmrHeightChart.destroy();
+                                                            window.xmrHeightChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Height', data: {values_json}, borderColor: 'rgb(75, 192, 192)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_xmr_target_height() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.target_height).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Target Height" }
+                                            canvas { id: "xmr-target-height-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('xmr-target-height-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.xmrTargetHeightChart) window.xmrTargetHeightChart.destroy();
+                                                            window.xmrTargetHeightChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Target Height', data: {values_json}, borderColor: 'rgb(255, 99, 132)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_xmr_difficulty() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.difficulty).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Difficulty" }
+                                            canvas { id: "xmr-difficulty-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('xmr-difficulty-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.xmrDifficultyChart) window.xmrDifficultyChart.destroy();
+                                                            window.xmrDifficultyChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Difficulty', data: {values_json}, borderColor: 'rgb(255, 205, 86)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_xmr_tx_count() {
+                                    {
+                                        let values: Vec<u64> = data.iter().map(|m| m.tx_count).collect();
+                                        let values_json = serde_json::to_string(&values).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Transaction Count" }
+                                            canvas { id: "xmr-tx-count-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('xmr-tx-count-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.xmrTxCountChart) window.xmrTxCountChart.destroy();
+                                                            window.xmrTxCountChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Transaction Count', data: {values_json}, borderColor: 'rgb(153, 102, 255)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: false }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                                if show_xmr_balance() {
+                                    {
+                                        let values: Vec<Option<f64>> = data.iter().map(|m| m.wallet_balance).collect();
+                                        let values_clean: Vec<f64> = values.iter().filter_map(|v| *v).collect();
+                                        let values_json = serde_json::to_string(&values_clean).unwrap_or_default();
+                                        rsx! {
+                                            h3 { style: "margin-top: 15px;", "Wallet Balance" }
+                                            canvas { id: "xmr-balance-chart", style: "max-height: 300px;" }
+                                            script {
+                                                dangerous_inner_html: r#"
+                                                    setTimeout(function() {{
+                                                        var ctx = document.getElementById('xmr-balance-chart');
+                                                        if (ctx && window.Chart) {{
+                                                            if (window.xmrBalanceChart) window.xmrBalanceChart.destroy();
+                                                            window.xmrBalanceChart = new Chart(ctx, {{
+                                                                type: 'line',
+                                                                data: {{
+                                                                    labels: {labels_json},
+                                                                    datasets: [{{label: 'Wallet Balance', data: {values_json}, borderColor: 'rgb(255, 159, 64)', tension: 0.1}}]
+                                                                }},
+                                                                options: {{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {{ y: {{ beginAtZero: true }} }}
+                                                                }}
+                                                            }});
+                                                        }}
+                                                    }}, 100);
+                                                "#
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     Some(None) => rsx! { p { "Failed to load Monero metrics" } },
@@ -344,19 +656,56 @@ fn Metrics() -> Element {
                 }
 
                 match asb_data.read().as_ref() {
-                    Some(Some(data)) => rsx! {
-                        pre {
-                            style: "background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto;",
-                            {data.iter().map(|metric| {
-                                let mut fields = Vec::new();
-                                fields.push(format!("  \"timestamp\": \"{}\"", metric.timestamp));
-                                if show_asb_balance() { fields.push(format!("  \"balance_btc\": {}", metric.balance_btc)); }
-                                if show_asb_pending() { fields.push(format!("  \"pending_swaps\": {}", metric.pending_swaps)); }
-                                if show_asb_completed() { fields.push(format!("  \"completed_swaps\": {}", metric.completed_swaps)); }
-                                if show_asb_failed() { fields.push(format!("  \"failed_swaps\": {}", metric.failed_swaps)); }
-                                if show_asb_up() { fields.push(format!("  \"up\": {}", metric.up)); }
-                                format!("{{\n{}\n}}", fields.join(",\n"))
-                            }).collect::<Vec<_>>().join(",\n")}
+                    Some(Some(data)) => {
+                        let timestamps: Vec<String> = data.iter().map(|m| m.timestamp.clone()).collect();
+                        let labels_json = serde_json::to_string(&timestamps).unwrap_or_default();
+
+                        let mut datasets = Vec::new();
+                        if show_asb_balance() {
+                            let values: Vec<f64> = data.iter().map(|m| m.balance_btc).collect();
+                            datasets.push(format!(r#"{{label: 'Balance BTC', data: {:?}, borderColor: 'rgb(255, 206, 86)', tension: 0.1}}"#, values));
+                        }
+                        if show_asb_pending() {
+                            let values: Vec<u64> = data.iter().map(|m| m.pending_swaps).collect();
+                            datasets.push(format!(r#"{{label: 'Pending Swaps', data: {:?}, borderColor: 'rgb(75, 192, 192)', tension: 0.1}}"#, values));
+                        }
+                        if show_asb_completed() {
+                            let values: Vec<u64> = data.iter().map(|m| m.completed_swaps).collect();
+                            datasets.push(format!(r#"{{label: 'Completed Swaps', data: {:?}, borderColor: 'rgb(54, 162, 235)', tension: 0.1}}"#, values));
+                        }
+                        if show_asb_failed() {
+                            let values: Vec<u64> = data.iter().map(|m| m.failed_swaps).collect();
+                            datasets.push(format!(r#"{{label: 'Failed Swaps', data: {:?}, borderColor: 'rgb(255, 99, 132)', tension: 0.1}}"#, values));
+                        }
+
+                        let datasets_json = datasets.join(",");
+                        let chart_id = "asb-chart";
+
+                        rsx! {
+                            canvas { id: "{chart_id}", style: "max-height: 400px;" }
+                            script {
+                                dangerous_inner_html: r#"
+                                    setTimeout(function() {{
+                                        var ctx = document.getElementById('{chart_id}');
+                                        if (ctx && window.Chart) {{
+                                            if (window.asbChart) window.asbChart.destroy();
+                                            window.asbChart = new Chart(ctx, {{
+                                                type: 'line',
+                                                data: {{
+                                                    labels: {labels_json},
+                                                    datasets: [{datasets_json}]
+                                                }},
+                                                options: {{
+                                                    responsive: true,
+                                                    scales: {{
+                                                        y: {{ beginAtZero: true }}
+                                                    }}
+                                                }}
+                                            }});
+                                        }}
+                                    }}, 100);
+                                "#
+                            }
                         }
                     },
                     Some(None) => rsx! { p { "Failed to load ASB metrics" } },
@@ -377,16 +726,44 @@ fn Metrics() -> Element {
                 }
 
                 match electrs_data.read().as_ref() {
-                    Some(Some(data)) => rsx! {
-                        pre {
-                            style: "background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto;",
-                            {data.iter().map(|metric| {
-                                let mut fields = Vec::new();
-                                fields.push(format!("  \"timestamp\": \"{}\"", metric.timestamp));
-                                if show_electrs_up() { fields.push(format!("  \"up\": {}", metric.up)); }
-                                if show_electrs_blocks() { fields.push(format!("  \"indexed_blocks\": {}", metric.indexed_blocks)); }
-                                format!("{{\n{}\n}}", fields.join(",\n"))
-                            }).collect::<Vec<_>>().join(",\n")}
+                    Some(Some(data)) => {
+                        let timestamps: Vec<String> = data.iter().map(|m| m.timestamp.clone()).collect();
+                        let labels_json = serde_json::to_string(&timestamps).unwrap_or_default();
+
+                        let mut datasets = Vec::new();
+                        if show_electrs_blocks() {
+                            let values: Vec<u64> = data.iter().map(|m| m.indexed_blocks).collect();
+                            datasets.push(format!(r#"{{label: 'Indexed Blocks', data: {:?}, borderColor: 'rgb(255, 159, 64)', tension: 0.1}}"#, values));
+                        }
+
+                        let datasets_json = datasets.join(",");
+                        let chart_id = "electrs-chart";
+
+                        rsx! {
+                            canvas { id: "{chart_id}", style: "max-height: 400px;" }
+                            script {
+                                dangerous_inner_html: r#"
+                                    setTimeout(function() {{
+                                        var ctx = document.getElementById('{chart_id}');
+                                        if (ctx && window.Chart) {{
+                                            if (window.electrsChart) window.electrsChart.destroy();
+                                            window.electrsChart = new Chart(ctx, {{
+                                                type: 'line',
+                                                data: {{
+                                                    labels: {labels_json},
+                                                    datasets: [{datasets_json}]
+                                                }},
+                                                options: {{
+                                                    responsive: true,
+                                                    scales: {{
+                                                        y: {{ beginAtZero: false }}
+                                                    }}
+                                                }}
+                                            }});
+                                        }}
+                                    }}, 100);
+                                "#
+                            }
                         }
                     },
                     Some(None) => rsx! { p { "Failed to load Electrs metrics" } },
