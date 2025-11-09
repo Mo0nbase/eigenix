@@ -1,8 +1,13 @@
 # Eigenix
 
+<img width="1510" height="912" alt="image" src="https://github.com/user-attachments/assets/51bf03a1-2ded-4349-9af3-12f8299d5e60" />
+
+
 Eigenix is a NixOS flake that provides a hardened, self-hosted deployment of the EigenLayer protocol for Bitcoin-to-Monero atomic swaps. In an era where governments and state actors suppress privacy-focused cryptocurrencies like Monero—leading to delistings from centralized exchanges and persecution of developers (e.g., Samurai Wallet for Bitcoin coinjoins)—Eigenix empowers users to run their own swap infrastructure, bypassing censorship and enabling private capital exchange.
 
 Built on the EigenLayer protocol, Eigenix integrates atomic swap backends with managed Bitcoin and Monero nodes, plus a trading engine that arbitrages fees against Kraken exchange rates.
+
+https://github.com/eigenwallet/core
 
 ## Features
 
