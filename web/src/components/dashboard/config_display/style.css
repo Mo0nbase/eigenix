@@ -1,0 +1,33 @@
+/* Config Display Component Styles */
+
+.config-display {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.config-card {
+    padding: 20px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+}
+
+.config-label {
+    color: #b0b0b0;
+    margin: 0 0 10px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.config-value {
+    color: #fff;
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+}
+
+.config-value-sm {
+    font-size: 20px;
+}

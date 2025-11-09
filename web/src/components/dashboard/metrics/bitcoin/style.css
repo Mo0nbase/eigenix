@@ -1,0 +1,34 @@
+/* Bitcoin Metrics Component Styles */
+
+.metrics-section {
+    padding: 25px;
+    border: 1px solid #333;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
+    position: relative;
+}
+
+.metrics-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    opacity: 0.3;
+}
+
+.btc-metrics .metrics-title {
+    color: #ffa500;
+    border-bottom-color: #ffa500;
+    text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+}
+
+.metrics-title {
+    margin: 0 0 25px 0;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-bottom: 1px solid var(--color);
+    padding-bottom: 15px;
+}

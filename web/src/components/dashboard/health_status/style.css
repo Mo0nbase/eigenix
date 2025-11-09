@@ -1,0 +1,49 @@
+/* Health Status Component Styles */
+
+.health-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.health-card {
+    padding: 20px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    position: relative;
+    overflow: hidden;
+}
+
+.health-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--status-color);
+    box-shadow: 0 0 10px var(--status-color);
+}
+
+.health-label {
+    color: #b0b0b0;
+    margin: 0 0 10px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.health-value {
+    color: var(--status-color);
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--status-color);
+    font-family: 'Courier New', monospace;
+}
+
+.health-value-sm {
+    font-size: 16px;
+    letter-spacing: 1px;
+}

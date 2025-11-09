@@ -12,13 +12,17 @@ dioxus = { version = "0.7.1", features = ["router"] }
 dioxus-logger = "0.7.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-web-sys = { version = "=0.3.81", features = ["Window", "Storage", "HtmlElement", "HtmlCanvasElement", "CanvasRenderingContext2d"] }
+web-sys = { version = "=0.3.81", features = ["Window", "Storage", "HtmlElement", "HtmlCanvasElement", "CanvasRenderingContext2d", "Navigator", "Clipboard"] }
 reqwest = { version = "0.12.24", features = ["json"] }
 gloo-net = { version = "0.6.0", features = ["json"] }
 js-sys = "0.3"
 wasm-bindgen-futures = "0.4"
 charming = { version = "0.6.0", features = ["wasm"] }
 chrono = "0.4"
+qrcode = "0.14"
+image = { version = "0.25", default-features = false, features = ["png"] }
+base64 = "0.22"
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
 
 [features]
 default = ["web"]

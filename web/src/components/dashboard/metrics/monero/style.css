@@ -1,0 +1,7 @@
+/* Monero Metrics Component Styles */
+
+.xmr-metrics .metrics-title {
+    color: #ff6b35;
+    border-bottom-color: #ff6b35;
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+}

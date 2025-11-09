@@ -1,0 +1,54 @@
+/* Status Display Component Styles */
+
+.status-display {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.status-card {
+    padding: 25px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--status-color, #707070);
+    box-shadow: 0 0 10px var(--status-color, #707070);
+}
+
+.status-card-secondary::before {
+    background: #707070;
+    box-shadow: none;
+}
+
+.status-label {
+    color: #b0b0b0;
+    margin: 0 0 15px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.status-value {
+    color: var(--status-color, #fff);
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px var(--status-color, transparent);
+    font-family: 'Courier New', monospace;
+}
+
+.status-value-sm {
+    font-size: 14px;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}

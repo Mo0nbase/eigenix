@@ -387,6 +387,7 @@ input[type="checkbox"] {
     margin: 30px 0;
 }
 
+
 /* Responsive */
 @media (max-width: 768px) {
     #navbar {
