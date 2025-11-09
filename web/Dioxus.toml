@@ -19,8 +19,10 @@ port = 8080
 # Additional CSS style files
 style = []
 
-# Additional JavaScript files
-script = []
+# Additional JavaScript files - ECharts required for Charming
+script = [
+  "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
+]
 
 [web.resource.dev]
 
