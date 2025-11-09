@@ -46,6 +46,9 @@
             pkgs.darwin.apple_sdk.frameworks.Security
           ];
 
+          # Set API_PORT for build.rs
+          API_PORT = "3000";
+
           # Only build the backend binary
           cargoBuildFlags = [
             "--package"
@@ -80,6 +83,9 @@
           ++ lib.optionals pkgs.stdenv.isDarwin [
             pkgs.darwin.apple_sdk.frameworks.Security
           ];
+
+          # Set API_PORT for build.rs
+          API_PORT = "3000";
 
           # Build the project with tests
           cargoBuildFlags = [

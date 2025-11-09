@@ -68,6 +68,7 @@
         buildPhase = ''
           runHook preBuild
           export HOME=$TMPDIR
+          export API_PORT=3000
 
           # Build the web package with dx bundle
           dx bundle --release

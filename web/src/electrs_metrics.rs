@@ -104,7 +104,8 @@ pub fn ElectrsMetrics(interval: Signal<i64>) -> Element {
 
     let electrs_up_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/electrs/up_status?minutes={}",
+            "http://localhost:{}/metrics/electrs/up_status?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -116,9 +117,10 @@ pub fn ElectrsMetrics(interval: Signal<i64>) -> Element {
             .ok()
     });
 
-    let electrs_blocks_data = use_resource(move || async move {
+    let electrs_indexed_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/electrs/indexed_blocks?minutes={}",
+            "http://localhost:{}/metrics/electrs/indexed_blocks?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -184,7 +186,7 @@ pub fn ElectrsMetrics(interval: Signal<i64>) -> Element {
                 }
 
                 if show_blocks() {
-                    match electrs_blocks_data.read().as_ref() {
+                    match electrs_indexed_data.read().as_ref() {
                         Some(Some(data)) if !data.is_empty() => rsx! {
                             MetricChart {
                                 id: "electrs-blocks".to_string(),

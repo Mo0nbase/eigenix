@@ -107,7 +107,8 @@ pub fn BitcoinMetrics(interval: Signal<i64>) -> Element {
 
     let btc_blocks_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/bitcoin/interval?minutes={}",
+            "http://localhost:{}/metrics/bitcoin/interval?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         let response = Request::get(&url).send().await.ok()?;
@@ -124,7 +125,8 @@ pub fn BitcoinMetrics(interval: Signal<i64>) -> Element {
 
     let btc_headers_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/bitcoin/interval?minutes={}",
+            "http://localhost:{}/metrics/bitcoin/interval?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         let response = Request::get(&url).send().await.ok()?;
@@ -141,7 +143,8 @@ pub fn BitcoinMetrics(interval: Signal<i64>) -> Element {
 
     let btc_verification_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/bitcoin/interval?minutes={}",
+            "http://localhost:{}/metrics/bitcoin/interval?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         let response = Request::get(&url).send().await.ok()?;
@@ -158,7 +161,8 @@ pub fn BitcoinMetrics(interval: Signal<i64>) -> Element {
 
     let btc_size_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/bitcoin/interval?minutes={}",
+            "http://localhost:{}/metrics/bitcoin/interval?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         let response = Request::get(&url).send().await.ok()?;
@@ -175,7 +179,8 @@ pub fn BitcoinMetrics(interval: Signal<i64>) -> Element {
 
     let btc_balance_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/bitcoin/interval?minutes={}",
+            "http://localhost:{}/metrics/bitcoin/interval?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         let response = Request::get(&url).send().await.ok()?;

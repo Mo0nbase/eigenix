@@ -107,7 +107,8 @@ pub fn AsbMetrics(interval: Signal<i64>) -> Element {
 
     let asb_balance_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/asb/balance_btc?minutes={}",
+            "http://localhost:{}/metrics/asb/balance_btc?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -121,7 +122,8 @@ pub fn AsbMetrics(interval: Signal<i64>) -> Element {
 
     let asb_pending_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/asb/pending_swaps?minutes={}",
+            "http://localhost:{}/metrics/asb/pending_swaps?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -135,7 +137,8 @@ pub fn AsbMetrics(interval: Signal<i64>) -> Element {
 
     let asb_completed_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/asb/completed_swaps?minutes={}",
+            "http://localhost:{}/metrics/asb/completed_swaps?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -149,7 +152,8 @@ pub fn AsbMetrics(interval: Signal<i64>) -> Element {
 
     let asb_failed_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/asb/failed_swaps?minutes={}",
+            "http://localhost:{}/metrics/asb/failed_swaps?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)
@@ -163,7 +167,8 @@ pub fn AsbMetrics(interval: Signal<i64>) -> Element {
 
     let asb_up_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:1235/metrics/asb/up_status?minutes={}",
+            "http://localhost:{}/metrics/asb/up_status?minutes={}",
+            env!("API_PORT"),
             interval()
         );
         Request::get(&url)

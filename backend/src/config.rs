@@ -31,7 +31,7 @@ pub struct Cli {
     pub host: Option<String>,
 
     /// Server listen port
-    #[arg(long, default_value = "1235")]
+    #[arg(long, default_value = env!("API_PORT"))]
     pub port: Option<u16>,
 
     /// SurrealDB endpoint
@@ -111,7 +111,7 @@ impl Default for Config {
         Self {
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
-                port: 1235,
+                port: env!("API_PORT").parse().unwrap(),
             },
             database: DatabaseConfig {
                 endpoint: "127.0.0.1:8001".to_string(),
