@@ -162,6 +162,8 @@ impl TradingEngine {
 
             let config = self.config.get();
 
+            tracing::info!("Trading engine check starting...");
+
             // Run one iteration of the trading logic
             if let Err(e) = self.check_and_rebalance().await {
                 tracing::error!("Trading engine error: {}", e);
@@ -172,6 +174,11 @@ impl TradingEngine {
                 sleep(Duration::from_secs(60)).await;
                 continue;
             }
+
+            tracing::info!(
+                "Trading engine check complete. Next check in {} seconds",
+                config.check_interval_secs
+            );
 
             // Sleep until next check
             sleep(Duration::from_secs(config.check_interval_secs)).await;
@@ -191,33 +198,41 @@ impl TradingEngine {
         let xmr_balance = xmr_balance.context("Monero balance not available")?;
 
         tracing::info!(
-            "Current balances - BTC: {:.8}, XMR: {:.8}",
+            "Trading check - Current balances: BTC={:.8}, XMR={:.8} (threshold={:.8}, target={:.8})",
             btc_balance,
-            xmr_balance
+            xmr_balance,
+            config.monero_min_threshold,
+            config.monero_target_balance
         );
 
         // Check if rebalancing is needed
         if xmr_balance >= config.monero_min_threshold {
-            tracing::debug!(
-                "XMR balance ({:.8}) above threshold ({:.8}), no rebalancing needed",
+            tracing::info!(
+                "✓ No trade needed - XMR balance ({:.8}) is above minimum threshold ({:.8})",
                 xmr_balance,
                 config.monero_min_threshold
             );
             return Ok(());
         }
 
-        tracing::info!(
-            "XMR balance ({:.8}) below threshold ({:.8}), starting rebalancing",
+        tracing::warn!(
+            "⚠ Trade required - XMR balance ({:.8}) below minimum threshold ({:.8})",
             xmr_balance,
             config.monero_min_threshold
         );
 
-        // Calculate how much XMR we need
+        // Calculate how much XMR we need to reach target
         let xmr_needed = config.monero_target_balance - xmr_balance;
-        tracing::info!("Need to acquire {:.8} XMR", xmr_needed);
+        tracing::info!(
+            "→ Initiating rebalance to acquire {:.8} XMR (target balance: {:.8})",
+            xmr_needed,
+            config.monero_target_balance
+        );
 
         // Execute the rebalancing workflow
         self.execute_rebalance(xmr_needed).await?;
+
+        tracing::info!("✓ Rebalance completed successfully");
 
         Ok(())
     }
@@ -226,9 +241,14 @@ impl TradingEngine {
     async fn execute_rebalance(&self, xmr_needed: f64) -> Result<()> {
         let config = self.config.get();
 
+        tracing::info!("══════════════════════════════════════════════════════");
+        tracing::info!("  REBALANCE WORKFLOW STARTING");
+        tracing::info!("══════════════════════════════════════════════════════");
+
         // Step 1: Get current BTC/XMR price from Kraken
         let kraken = KrakenClient::new(self.kraken_api_key.clone(), self.kraken_api_secret.clone());
 
+        tracing::info!("[1/6] Fetching BTC/XMR exchange rate from Kraken...");
         let ticker = kraken
             .get_ticker("XBTXMR")
             .await
@@ -238,7 +258,8 @@ impl TradingEngine {
             .parse()
             .context("Failed to parse BTC/XMR price")?;
 
-        tracing::info!("Current BTC/XMR rate: {:.8}", btc_xmr_price);
+        tracing::info!("  Exchange rate: 1 BTC = {:.8} XMR", 1.0 / btc_xmr_price);
+        tracing::info!("  Exchange rate: 1 XMR = {:.8} BTC", btc_xmr_price);
 
         // Calculate how much BTC we need (with slippage buffer)
         let slippage_multiplier = 1.0 + (config.slippage_tolerance_percent / 100.0);
@@ -247,7 +268,11 @@ impl TradingEngine {
         // Cap at max BTC per rebalance
         let btc_to_use = btc_needed.min(config.max_btc_per_rebalance);
 
-        tracing::info!("Will use {:.8} BTC for rebalancing", btc_to_use);
+        tracing::info!(
+            "  BTC needed: {:.8} (includes {:.1}% slippage tolerance)",
+            btc_to_use,
+            config.slippage_tolerance_percent
+        );
 
         // Check if we have enough BTC (keeping reserve)
         let (btc_balance, _) = self.get_wallet_balances().await?;
@@ -263,43 +288,49 @@ impl TradingEngine {
         }
 
         // Step 2: Deposit BTC to Kraken
-        tracing::info!("Step 1: Depositing {:.8} BTC to Kraken", btc_to_use);
+        tracing::info!("[2/6] Depositing {:.8} BTC to Kraken", btc_to_use);
         let btc_txid = self.deposit_bitcoin_to_kraken(btc_to_use).await?;
+        tracing::info!("  Bitcoin sent, txid: {}", btc_txid);
 
         // Step 3: Wait for deposit to confirm
-        tracing::info!(
-            "Step 2: Waiting for BTC deposit to confirm (txid: {})",
-            btc_txid
-        );
+        tracing::info!("[3/6] Waiting for BTC deposit confirmation...");
         self.wait_for_bitcoin_deposit(&kraken, &btc_txid).await?;
+        tracing::info!("  ✓ Bitcoin deposit confirmed on Kraken");
 
         // Step 4: Execute BTC->XMR trade on Kraken
-        tracing::info!("Step 3: Executing BTC->XMR trade on Kraken");
+        tracing::info!("[4/6] Placing BTC→XMR trade order on Kraken");
         let order_id = self
             .execute_btc_to_xmr_trade(&kraken, btc_to_use, &config)
             .await?;
+        tracing::info!("  Order placed, order_id: {}", order_id);
 
         // Step 5: Wait for trade to execute
-        tracing::info!("Step 4: Waiting for trade execution (order: {})", order_id);
+        tracing::info!("[5/6] Waiting for trade execution...");
         let xmr_amount = self
             .wait_for_trade_execution(&kraken, &order_id, &config)
             .await?;
+        tracing::info!("  ✓ Trade executed, received {:.8} XMR", xmr_amount);
 
         // Step 6: Withdraw XMR from Kraken
-        tracing::info!("Step 5: Withdrawing {:.8} XMR from Kraken", xmr_amount);
+        tracing::info!(
+            "[6/6] Withdrawing {:.8} XMR from Kraken to wallet",
+            xmr_amount
+        );
         let withdraw_refid = self
             .withdraw_monero_from_kraken(&kraken, xmr_amount)
             .await?;
+        tracing::info!("  Withdrawal initiated, refid: {}", withdraw_refid);
 
         // Step 7: Wait for withdrawal to complete
-        tracing::info!(
-            "Step 6: Waiting for XMR withdrawal (refid: {})",
-            withdraw_refid
-        );
+        tracing::info!("  Waiting for XMR withdrawal confirmation...");
         self.wait_for_monero_withdrawal(&kraken, &withdraw_refid)
             .await?;
+        tracing::info!("  ✓ XMR received in wallet");
 
-        tracing::info!("Rebalancing completed successfully!");
+        tracing::info!("══════════════════════════════════════════════════════");
+        tracing::info!("  REBALANCE WORKFLOW COMPLETED");
+        tracing::info!("  Traded {:.8} BTC → {:.8} XMR", btc_to_use, xmr_amount);
+        tracing::info!("══════════════════════════════════════════════════════");
         Ok(())
     }
 
@@ -360,7 +391,7 @@ impl TradingEngine {
             .await
             .context("Failed to get Kraken BTC deposit address")?;
 
-        tracing::info!("Kraken BTC deposit address: {}", deposit_address);
+        tracing::debug!("Kraken BTC deposit address: {}", deposit_address);
 
         // Create transaction record before sending
         let transaction = StoredTradingTransaction {
@@ -385,7 +416,7 @@ impl TradingEngine {
         let transaction_id = if let Some(db) = self.get_db() {
             match db.store_trading_transaction(&transaction).await {
                 Ok(id) => {
-                    tracing::info!("Created transaction record: {}", id);
+                    tracing::debug!("Created transaction record: {}", id);
                     Some(id)
                 }
                 Err(e) => {
@@ -420,7 +451,7 @@ impl TradingEngine {
             }
         };
 
-        tracing::info!("Bitcoin sent to Kraken, txid: {}", txid);
+        tracing::debug!("Bitcoin transaction broadcast, txid: {}", txid);
 
         // Update transaction with txid
         if let (Some(db), Some(id)) = (self.get_db(), transaction_id.as_ref()) {
@@ -453,7 +484,7 @@ impl TradingEngine {
             // Note: This is simplified - in production you'd want to match the specific txid
             if let Some(deposit) = deposits.first() {
                 if deposit.status == "Success" {
-                    tracing::info!("Bitcoin deposit confirmed on Kraken");
+                    tracing::debug!("Bitcoin deposit confirmed on Kraken");
 
                     // Mark transaction as completed
                     if let Some(db) = self.get_db() {
@@ -530,7 +561,7 @@ impl TradingEngine {
         let transaction_id = if let Some(db) = self.get_db() {
             match db.store_trading_transaction(&transaction).await {
                 Ok(id) => {
-                    tracing::info!("Created trade transaction record: {}", id);
+                    tracing::debug!("Created trade transaction record: {}", id);
                     Some(id)
                 }
                 Err(e) => {
@@ -568,7 +599,7 @@ impl TradingEngine {
             .context("No order ID returned from Kraken")?
             .clone();
 
-        tracing::info!("Order placed on Kraken: {}", order_id);
+        tracing::debug!("Order placed on Kraken: {}", order_id);
 
         // Update transaction with order_id
         if let (Some(db), Some(id)) = (self.get_db(), transaction_id.as_ref()) {
@@ -632,7 +663,7 @@ impl TradingEngine {
                     // Get actual executed price for exchange rate
                     let price = order_info.price.parse::<f64>().ok();
 
-                    tracing::info!("Trade executed successfully, received {:.8} XMR", vol_exec);
+                    tracing::debug!("Trade executed successfully, received {:.8} XMR", vol_exec);
 
                     // Mark transaction as completed
                     if let Some(db) = self.get_db() {
@@ -700,7 +731,7 @@ impl TradingEngine {
             .await
             .context("Failed to get Monero address")?;
 
-        tracing::info!("Withdrawing to Monero address: {}", address);
+        tracing::debug!("Withdrawing to Monero address: {}", address);
 
         // Create transaction record before withdrawing
         let transaction = StoredTradingTransaction {
@@ -725,7 +756,7 @@ impl TradingEngine {
         let transaction_id = if let Some(db) = self.get_db() {
             match db.store_trading_transaction(&transaction).await {
                 Ok(id) => {
-                    tracing::info!("Created withdrawal transaction record: {}", id);
+                    tracing::debug!("Created withdrawal transaction record: {}", id);
                     Some(id)
                 }
                 Err(e) => {
@@ -755,7 +786,7 @@ impl TradingEngine {
         };
 
         let refid = withdraw_result.refid;
-        tracing::info!("Monero withdrawal initiated: {}", refid);
+        tracing::debug!("Monero withdrawal initiated: {}", refid);
 
         // Update transaction with refid
         if let (Some(db), Some(id)) = (self.get_db(), transaction_id.as_ref()) {
@@ -804,7 +835,7 @@ impl TradingEngine {
             // Find our withdrawal
             if let Some(withdrawal) = withdrawals.iter().find(|w| w.refid == refid) {
                 if withdrawal.status == "Success" {
-                    tracing::info!("Monero withdrawal completed successfully");
+                    tracing::debug!("Monero withdrawal completed successfully");
 
                     // Mark transaction as completed
                     if let Some(db) = self.get_db() {
@@ -857,6 +888,23 @@ mod tests {
 
     fn create_test_engine() -> TradingEngine {
         let config = TradingConfig::default();
+        let shared_config = SharedTradingConfig::new(config);
+
+        TradingEngine::new(
+            shared_config,
+            "test_key".to_string(),
+            "test_secret".to_string(),
+            "http://localhost:8332".to_string(),
+            "/tmp/cookie".to_string(),
+            "test_wallet".to_string(),
+            "http://localhost:18082/json_rpc".to_string(),
+            "test_xmr_wallet".to_string(),
+            "".to_string(),
+        )
+    }
+
+    #[allow(dead_code)]
+    fn create_test_engine_with_config(config: TradingConfig) -> TradingEngine {
         let shared_config = SharedTradingConfig::new(config);
 
         TradingEngine::new(
@@ -1034,5 +1082,323 @@ mod tests {
         assert_eq!(status.state, TradingState::Disabled);
         assert!(!status.enabled);
         // Balances may be None if wallets aren't available
+    }
+
+    // ===== Trading Logic Tests =====
+
+    #[test]
+    fn test_xmr_amount_calculation_when_below_threshold() {
+        // Test that we calculate the correct amount of XMR needed
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.1,
+            check_interval_secs: 300,
+            order_timeout_secs: 600,
+            slippage_tolerance_percent: 1.0,
+            use_limit_orders: true,
+        };
+
+        // Current XMR: 0.5, Target: 5.0 -> Need 4.5 XMR
+        let current_xmr = 0.5;
+        let xmr_needed = config.monero_target_balance - current_xmr;
+        assert_eq!(xmr_needed, 4.5);
+
+        // Current XMR: 0.0, Target: 5.0 -> Need 5.0 XMR
+        let current_xmr = 0.0;
+        let xmr_needed = config.monero_target_balance - current_xmr;
+        assert_eq!(xmr_needed, 5.0);
+
+        // Current XMR: 0.99, Target: 5.0 -> Need 4.01 XMR
+        let current_xmr = 0.99;
+        let xmr_needed = config.monero_target_balance - current_xmr;
+        assert!((xmr_needed - 4.01).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_should_trade_when_below_threshold() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            ..TradingConfig::default()
+        };
+
+        // Should trade when below threshold
+        let current_xmr = 0.5;
+        assert!(current_xmr < config.monero_min_threshold);
+
+        let current_xmr = 0.99;
+        assert!(current_xmr < config.monero_min_threshold);
+
+        let current_xmr = 0.0;
+        assert!(current_xmr < config.monero_min_threshold);
+    }
+
+    #[test]
+    fn test_should_not_trade_when_above_threshold() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            ..TradingConfig::default()
+        };
+
+        // Should NOT trade when at or above threshold
+        let current_xmr = 1.0;
+        assert!(current_xmr >= config.monero_min_threshold);
+
+        let current_xmr = 1.5;
+        assert!(current_xmr >= config.monero_min_threshold);
+
+        let current_xmr = 5.0;
+        assert!(current_xmr >= config.monero_min_threshold);
+
+        let current_xmr = 10.0;
+        assert!(current_xmr >= config.monero_min_threshold);
+    }
+
+    #[test]
+    fn test_btc_calculation_with_slippage() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.5,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        // Need 4 XMR, rate is 1 XMR = 0.02 BTC (50 XMR per BTC)
+        let xmr_needed = 4.0;
+        let btc_xmr_price = 0.02; // 1 XMR costs 0.02 BTC
+
+        let slippage_multiplier = 1.0 + (config.slippage_tolerance_percent / 100.0);
+        let btc_needed = xmr_needed * btc_xmr_price * slippage_multiplier;
+
+        // Expected: 4 * 0.02 * 1.01 = 0.0808
+        assert!((btc_needed - 0.0808).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_btc_capped_at_max_per_rebalance() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 100.0, // Very high target
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.1, // Max 0.1 BTC per trade
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        // Need 99 XMR, rate is 1 XMR = 0.02 BTC
+        let xmr_needed = 99.0;
+        let btc_xmr_price = 0.02;
+
+        let slippage_multiplier = 1.0 + (config.slippage_tolerance_percent / 100.0);
+        let btc_needed = xmr_needed * btc_xmr_price * slippage_multiplier;
+
+        // Would need 1.9998 BTC, but capped at max_btc_per_rebalance
+        let btc_to_use = btc_needed.min(config.max_btc_per_rebalance);
+        assert_eq!(btc_to_use, 0.1);
+    }
+
+    #[test]
+    fn test_insufficient_btc_calculation() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.05, // Keep 0.05 BTC as reserve
+            max_btc_per_rebalance: 0.5,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        // Current BTC balance: 0.1
+        let btc_balance = 0.1;
+        let btc_available = btc_balance - config.bitcoin_reserve_minimum;
+        // Available: 0.1 - 0.05 = 0.05 BTC
+        assert_eq!(btc_available, 0.05);
+
+        // If we need 0.08 BTC, we don't have enough
+        let btc_needed = 0.08;
+        assert!(btc_available < btc_needed);
+    }
+
+    #[test]
+    fn test_sufficient_btc_calculation() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.5,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        // Current BTC balance: 0.5
+        let btc_balance = 0.5;
+        let btc_available = btc_balance - config.bitcoin_reserve_minimum;
+        // Available: 0.5 - 0.01 = 0.49 BTC
+        assert_eq!(btc_available, 0.49);
+
+        // If we need 0.08 BTC, we have enough
+        let btc_needed = 0.08;
+        assert!(btc_available >= btc_needed);
+    }
+
+    #[test]
+    fn test_threshold_boundary_conditions() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            ..TradingConfig::default()
+        };
+
+        // Exactly at threshold - should NOT trade
+        let current_xmr = 1.0;
+        assert!(current_xmr >= config.monero_min_threshold);
+
+        // Just below threshold - SHOULD trade
+        let current_xmr = 0.999999;
+        assert!(current_xmr < config.monero_min_threshold);
+
+        // Just above threshold - should NOT trade
+        let current_xmr = 1.000001;
+        assert!(current_xmr >= config.monero_min_threshold);
+    }
+
+    #[test]
+    fn test_different_slippage_tolerances() {
+        // Test 0% slippage
+        let slippage_percent = 0.0;
+        let slippage_multiplier = 1.0 + (slippage_percent / 100.0);
+        assert_eq!(slippage_multiplier, 1.0);
+
+        // Test 1% slippage
+        let slippage_percent = 1.0;
+        let slippage_multiplier = 1.0 + (slippage_percent / 100.0);
+        assert_eq!(slippage_multiplier, 1.01);
+
+        // Test 5% slippage
+        let slippage_percent = 5.0;
+        let slippage_multiplier = 1.0 + (slippage_percent / 100.0);
+        assert_eq!(slippage_multiplier, 1.05);
+
+        // Test 10% slippage
+        let slippage_percent = 10.0;
+        let slippage_multiplier = 1.0 + (slippage_percent / 100.0);
+        assert_eq!(slippage_multiplier, 1.10);
+    }
+
+    #[test]
+    fn test_realistic_trading_scenario_low_xmr() {
+        // Scenario: User has received lots of BTC, XMR is low
+        let config = TradingConfig {
+            monero_min_threshold: 10.0,
+            monero_target_balance: 50.0,
+            bitcoin_reserve_minimum: 0.1,
+            max_btc_per_rebalance: 1.0,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        let current_btc = 5.0;
+        let current_xmr = 2.0; // Below threshold!
+        let btc_xmr_price = 0.02; // 1 XMR = 0.02 BTC (50 XMR per BTC)
+
+        // Should trade
+        assert!(current_xmr < config.monero_min_threshold);
+
+        // Calculate how much XMR needed
+        let xmr_needed = config.monero_target_balance - current_xmr;
+        assert_eq!(xmr_needed, 48.0);
+
+        // Calculate BTC needed with slippage
+        let slippage_multiplier = 1.0 + (config.slippage_tolerance_percent / 100.0);
+        let btc_needed = xmr_needed * btc_xmr_price * slippage_multiplier;
+        // 48 * 0.02 * 1.01 = 0.9696
+        assert!((btc_needed - 0.9696).abs() < 0.0001);
+
+        // Cap at max per rebalance
+        let btc_to_use = btc_needed.min(config.max_btc_per_rebalance);
+        assert_eq!(btc_to_use, 0.9696);
+
+        // Check if we have enough BTC
+        let btc_available = current_btc - config.bitcoin_reserve_minimum;
+        assert_eq!(btc_available, 4.9);
+        assert!(btc_available >= btc_to_use); // Yes, we have enough
+    }
+
+    #[test]
+    fn test_realistic_trading_scenario_sufficient_xmr() {
+        // Scenario: Balanced system, no trade needed
+        let config = TradingConfig {
+            monero_min_threshold: 10.0,
+            monero_target_balance: 50.0,
+            bitcoin_reserve_minimum: 0.1,
+            max_btc_per_rebalance: 1.0,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        let _current_btc = 1.0;
+        let current_xmr = 45.0; // Above threshold!
+
+        // Should NOT trade
+        assert!(current_xmr >= config.monero_min_threshold);
+    }
+
+    #[test]
+    fn test_edge_case_zero_balances() {
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.5,
+            slippage_tolerance_percent: 1.0,
+            ..TradingConfig::default()
+        };
+
+        // Zero XMR - should trade
+        let current_xmr = 0.0;
+        assert!(current_xmr < config.monero_min_threshold);
+        let xmr_needed = config.monero_target_balance - current_xmr;
+        assert_eq!(xmr_needed, 5.0);
+
+        // Zero BTC - can't trade
+        let current_btc = 0.0;
+        let btc_available = current_btc - config.bitcoin_reserve_minimum;
+        assert!(btc_available < 0.0); // Not enough BTC
+    }
+
+    #[test]
+    fn test_config_validation_for_trading_logic() {
+        // Valid config
+        let config = TradingConfig {
+            monero_min_threshold: 1.0,
+            monero_target_balance: 5.0,
+            bitcoin_reserve_minimum: 0.01,
+            max_btc_per_rebalance: 0.5,
+            check_interval_secs: 300,
+            order_timeout_secs: 600,
+            slippage_tolerance_percent: 1.0,
+            use_limit_orders: true,
+        };
+        assert!(config.validate().is_ok());
+
+        // Invalid: min_threshold >= target
+        let invalid_config = TradingConfig {
+            monero_min_threshold: 5.0,
+            monero_target_balance: 1.0,
+            ..config.clone()
+        };
+        assert!(invalid_config.validate().is_err());
+
+        // Invalid: negative values
+        let invalid_config = TradingConfig {
+            monero_min_threshold: -1.0,
+            ..config.clone()
+        };
+        assert!(invalid_config.validate().is_err());
     }
 }

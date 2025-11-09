@@ -430,7 +430,7 @@ impl MetricsDatabase {
         &self,
         transaction: &StoredTradingTransaction,
     ) -> Result<String> {
-        let result: Option<StoredTradingTransaction> = self
+        let _result: Option<StoredTradingTransaction> = self
             .db
             .create("trading_transactions")
             .content(transaction.clone())
