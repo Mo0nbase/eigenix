@@ -1,11 +1,5 @@
 /// Page components for each route
-pub mod home;
-pub mod metrics;
-pub mod trading;
-pub mod wallets;
+pub mod dashboard;
 
-pub use home::Home;
-pub use metrics::Metrics;
-pub use trading::Trading;
-pub use wallets::Wallets;
+pub use dashboard::Dashboard;
 

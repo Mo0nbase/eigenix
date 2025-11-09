@@ -2,33 +2,15 @@ use dioxus::prelude::*;
 
 use crate::routes::Route;
 
-/// Navigation bar component with links to main sections
+/// Navigation bar component with cyberpunk aesthetic
 #[component]
 pub fn Navbar() -> Element {
     rsx! {
         div { id: "navbar",
             Link {
-                to: Route::Home {},
+                to: Route::Dashboard {},
                 id: "logo",
-                "🌀 Eigenix"
-            }
-            div { id: "nav-links",
-                Link {
-                    to: Route::Home {},
-                    "Home"
-                }
-                Link {
-                    to: Route::Metrics {},
-                    "Metrics"
-                }
-                Link {
-                    to: Route::Wallets {},
-                    "Wallets"
-                }
-                Link {
-                    to: Route::Trading {},
-                    "Trading"
-                }
+                "[ λix ]"
             }
         }
     }

@@ -3,7 +3,7 @@ name = "eigenix-web"
 default_platform = "web"
 
 [web.app]
-title = "Eigenix"
+title = "λix"
 
 [web.watcher]
 
@@ -15,6 +15,9 @@ port = 8080
 
 # include `assets` in web platform
 [web.resource]
+
+# Favicon
+icon = ["assets/favicon.ico"]
 
 # Additional CSS style files
 style = []

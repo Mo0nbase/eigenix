@@ -18,6 +18,7 @@ gloo-net = { version = "0.6.0", features = ["json"] }
 js-sys = "0.3"
 wasm-bindgen-futures = "0.4"
 charming = { version = "0.6.0", features = ["wasm"] }
+chrono = "0.4"
 
 [features]
 default = ["web"]
