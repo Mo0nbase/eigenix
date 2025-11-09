@@ -9,6 +9,9 @@ Built on the EigenLayer protocol, Eigenix integrates atomic swap backends with m
 
 https://github.com/eigenwallet/core
 
+UI written in rust with Dioxus 0.7
+https://dioxuslabs.com/
+
 ## Features
 
 - **Hardened Node Deployment**: Full Bitcoin Core and Monero nodes with security hardening via NixOS modules.
