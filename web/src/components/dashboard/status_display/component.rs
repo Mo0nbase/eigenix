@@ -95,6 +95,22 @@ pub fn StatusDisplay(status: TradingStatus) -> Element {
         TradingState::Error { .. } => "#ff3333",
     };
 
+    let state_tooltip = match &status.state {
+        TradingState::Disabled => "Engine is not running",
+        TradingState::Monitoring => "Actively monitoring balances for rebalancing opportunities",
+        TradingState::DepositingBitcoin { .. } => "Sending Bitcoin to Kraken exchange",
+        TradingState::WaitingForBitcoinDeposit { .. } => {
+            "Waiting for Bitcoin deposit confirmation on Kraken"
+        }
+        TradingState::Trading { .. } => "Executing BTC→XMR trade on Kraken",
+        TradingState::WaitingForTradeExecution { .. } => "Waiting for trade order to complete",
+        TradingState::WithdrawingMonero { .. } => "Withdrawing Monero from Kraken to local wallet",
+        TradingState::WaitingForMoneroWithdrawal { .. } => {
+            "Waiting for Monero withdrawal to complete"
+        }
+        TradingState::Error { .. } => "An error occurred during operation",
+    };
+
     let on_toggle = move |_| {
         spawn(async move {
             is_toggling.set(true);
@@ -121,83 +137,23 @@ pub fn StatusDisplay(status: TradingStatus) -> Element {
         div {
             class: "status-display",
 
+            // Control button - full width at top
             div {
-                class: "status-card",
-                style: "--status-color: {status_color}",
-
-                h4 {
-                    class: "status-label",
-                    "ENGINE STATE"
-                }
-                p {
-                    class: "status-value",
-                    "{status_text}"
-                }
-            }
-
-            div {
-                class: "status-card",
-                style: "--status-color: {state_color}",
-
-                h4 {
-                    class: "status-label",
-                    "CURRENT STATE"
-                }
-                p {
-                    class: "status-value status-value-sm",
-                    style: "font-size: 11px;",
-                    "{state_text}"
-                }
-            }
-
-            if let Some(last_check) = &status.last_check {
-                div {
-                    class: "status-card status-card-secondary",
-
-                    h4 {
-                        class: "status-label",
-                        "LAST CHECK"
-                    }
-                    p {
-                        class: "status-value status-value-sm",
-                        "{last_check}"
-                    }
-                }
-            }
-
-            if let Some(last_rebalance) = &status.last_rebalance {
-                div {
-                    class: "status-card",
-                    style: "--status-color: #00d4ff",
-
-                    h4 {
-                        class: "status-label",
-                        "LAST REBALANCE"
-                    }
-                    p {
-                        class: "status-value status-value-sm",
-                        "{last_rebalance}"
-                    }
-                }
-            }
-
-            // Control button
-            div {
-                class: "status-card",
-                style: "border: 1px solid {status_color};",
+                class: "status-card status-card-full-width",
+                style: "border: 1px solid #666;",
 
                 h4 {
                     class: "status-label",
                     "CONTROLS"
                 }
                 button {
-                    class: "toggle-button",
+                    class: if status.enabled { "toggle-button toggle-button-disable" } else { "toggle-button toggle-button-enable" },
                     style: "
                         width: 100%;
                         padding: 12px;
-                        background: linear-gradient(135deg, {status_color}22, {status_color}11);
-                        border: 1px solid {status_color};
-                        color: {status_color};
+                        background: #0a0a0a;
+                        border: 1px solid #666;
+                        color: #999;
                         font-family: 'Courier New', monospace;
                         font-size: 14px;
                         font-weight: bold;
@@ -218,80 +174,146 @@ pub fn StatusDisplay(status: TradingStatus) -> Element {
                 }
             }
 
-            if let Some(error) = toggle_error() {
+            // Grid container for remaining cards
+            div {
+                class: "status-grid",
+
                 div {
                     class: "status-card",
-                    style: "--status-color: #ff3333",
+                    style: "--status-color: {status_color}",
 
                     h4 {
                         class: "status-label",
-                        "ERROR"
+                        "ENGINE STATE"
                     }
                     p {
-                        class: "status-value status-value-sm",
-                        style: "color: #ff3333; font-size: 10px;",
-                        "{error}"
+                        class: "status-value",
+                        "{status_text}"
                     }
                 }
-            }
 
-            // Wallet balances
-            if let Some(btc) = status.current_btc_balance {
                 div {
-                    class: "status-card status-card-secondary",
+                    class: "status-card",
+                    style: "--status-color: {state_color}",
+                    title: "{state_tooltip}",
 
                     h4 {
                         class: "status-label",
-                        "WALLET BTC"
+                        "CURRENT STATE"
                     }
                     p {
                         class: "status-value status-value-sm",
-                        "{btc:.8}"
+                        style: "font-size: 11px;",
+                        "{state_text}"
                     }
                 }
-            }
 
-            if let Some(xmr) = status.current_xmr_balance {
-                div {
-                    class: "status-card status-card-secondary",
+                // Wallet balances
+                if let Some(btc) = status.current_btc_balance {
+                    div {
+                        class: "status-card status-card-secondary",
 
-                    h4 {
-                        class: "status-label",
-                        "WALLET XMR"
-                    }
-                    p {
-                        class: "status-value status-value-sm",
-                        "{xmr:.12}"
-                    }
-                }
-            }
-
-            if let Some(btc) = status.kraken_btc_balance {
-                div {
-                    class: "status-card status-card-secondary",
-
-                    h4 {
-                        class: "status-label",
-                        "KRAKEN BTC"
-                    }
-                    p {
-                        class: "status-value status-value-sm",
-                        "{btc:.8}"
+                        h4 {
+                            class: "status-label",
+                            "WALLET BTC"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{btc:.8}"
+                        }
                     }
                 }
-            }
 
-            if let Some(xmr) = status.kraken_xmr_balance {
-                div {
-                    class: "status-card status-card-secondary",
+                if let Some(xmr) = status.current_xmr_balance {
+                    div {
+                        class: "status-card status-card-secondary",
 
-                    h4 {
-                        class: "status-label",
-                        "KRAKEN XMR"
+                        h4 {
+                            class: "status-label",
+                            "WALLET XMR"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{xmr:.12}"
+                        }
                     }
-                    p {
-                        class: "status-value status-value-sm",
-                        "{xmr:.12}"
+                }
+
+                if let Some(btc) = status.kraken_btc_balance {
+                    div {
+                        class: "status-card status-card-secondary",
+
+                        h4 {
+                            class: "status-label",
+                            "KRAKEN BTC"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{btc:.8}"
+                        }
+                    }
+                }
+
+                if let Some(xmr) = status.kraken_xmr_balance {
+                    div {
+                        class: "status-card status-card-secondary",
+
+                        h4 {
+                            class: "status-label",
+                            "KRAKEN XMR"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{xmr:.12}"
+                        }
+                    }
+                }
+
+                if let Some(last_check) = &status.last_check {
+                    div {
+                        class: "status-card status-card-secondary",
+
+                        h4 {
+                            class: "status-label",
+                            "LAST CHECK"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{last_check}"
+                        }
+                    }
+                }
+
+                if let Some(last_rebalance) = &status.last_rebalance {
+                    div {
+                        class: "status-card",
+                        style: "--status-color: #00d4ff",
+
+                        h4 {
+                            class: "status-label",
+                            "LAST REBALANCE"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            "{last_rebalance}"
+                        }
+                    }
+                }
+
+                if let Some(error) = toggle_error() {
+                    div {
+                        class: "status-card",
+                        style: "--status-color: #ff3333; grid-column: 1 / -1;",
+
+                        h4 {
+                            class: "status-label",
+                            "ERROR"
+                        }
+                        p {
+                            class: "status-value status-value-sm",
+                            style: "color: #ff3333; font-size: 10px;",
+                            "{error}"
+                        }
                     }
                 }
             }

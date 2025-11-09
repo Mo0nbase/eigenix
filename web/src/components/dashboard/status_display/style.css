@@ -1,8 +1,18 @@
 /* Status Display Component Styles */
 
 .status-display {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.status-card-full-width {
+    width: 100%;
+}
+
+.status-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
 }
 
@@ -101,8 +111,8 @@
 .toggle-button {
     width: 100%;
     padding: 12px;
-    border: 1px solid;
-    color: inherit;
+    border: 1px solid #666;
+    color: #999;
     font-family: "Courier New", monospace;
     font-size: 14px;
     font-weight: bold;
@@ -110,12 +120,23 @@
     letter-spacing: 2px;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: transparent;
+    background: #0a0a0a;
 }
 
-.toggle-button:hover:not(:disabled) {
+.toggle-button-enable:hover:not(:disabled) {
+    border-color: #00ff9f;
+    color: #00ff9f;
+    background: linear-gradient(135deg, #00ff9f22, #00ff9f11);
+    box-shadow: 0 0 20px rgba(0, 255, 159, 0.5);
     transform: translateY(-2px);
-    box-shadow: 0 0 20px currentColor;
+}
+
+.toggle-button-disable:hover:not(:disabled) {
+    border-color: #ff3333;
+    color: #ff3333;
+    background: linear-gradient(135deg, #ff333322, #ff333311);
+    box-shadow: 0 0 20px rgba(255, 51, 51, 0.5);
+    transform: translateY(-2px);
 }
 
 .toggle-button:active:not(:disabled) {
