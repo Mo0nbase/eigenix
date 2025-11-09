@@ -161,7 +161,10 @@ impl BitcoinWallet {
                         Ok(_) => tracing::info!("Loaded existing wallet: {}", self.wallet_name),
                         Err(load_err) => {
                             if load_err.to_string().contains("already loaded") {
-                                tracing::info!("Bitcoin wallet already loaded: {}", self.wallet_name);
+                                tracing::info!(
+                                    "Bitcoin wallet already loaded: {}",
+                                    self.wallet_name
+                                );
                             } else {
                                 return Err(load_err.context("Failed to load existing wallet"));
                             }

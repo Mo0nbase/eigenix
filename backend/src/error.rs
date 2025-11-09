@@ -52,9 +52,10 @@ impl fmt::Display for ApiError {
 impl std::error::Error for ApiError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            ApiError::Database(e) | ApiError::Wallet(e) | ApiError::Metrics(e) | ApiError::Internal(e) => {
-                e.source()
-            }
+            ApiError::Database(e)
+            | ApiError::Wallet(e)
+            | ApiError::Metrics(e)
+            | ApiError::Internal(e) => e.source(),
             ApiError::NotFound(_) | ApiError::BadRequest(_) => None,
         }
     }
@@ -78,8 +79,16 @@ impl IntoResponse for ApiError {
                 "Metrics collection failed".to_string(),
                 Some(e.to_string()),
             ),
-            ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, "Resource not found".to_string(), Some(msg)),
-            ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "Bad request".to_string(), Some(msg)),
+            ApiError::NotFound(msg) => (
+                StatusCode::NOT_FOUND,
+                "Resource not found".to_string(),
+                Some(msg),
+            ),
+            ApiError::BadRequest(msg) => (
+                StatusCode::BAD_REQUEST,
+                "Bad request".to_string(),
+                Some(msg),
+            ),
             ApiError::Internal(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),
@@ -108,4 +117,3 @@ impl From<anyhow::Error> for ApiError {
         ApiError::Internal(err)
     }
 }
-

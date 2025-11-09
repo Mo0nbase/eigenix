@@ -1,7 +1,4 @@
-use axum::{
-    routing::get,
-    Json, Router,
-};
+use axum::{routing::get, Json, Router};
 use clap::Parser;
 use serde::Serialize;
 use std::{net::SocketAddr, sync::Arc};
@@ -30,7 +27,6 @@ async fn health() -> Json<Health> {
         version: env!("CARGO_PKG_VERSION").to_string(),
     })
 }
-
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

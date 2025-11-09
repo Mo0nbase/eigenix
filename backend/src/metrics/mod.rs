@@ -9,6 +9,5 @@ pub mod collector;
 pub mod types;
 
 // Re-export types for convenience
-pub use types::*;
 pub use collector::MetricsCollector;
-
+pub use types::*;

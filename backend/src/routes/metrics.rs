@@ -97,14 +97,8 @@ pub async fn container_metrics(
 }
 
 /// Get metrics summary
-pub async fn summary_metrics(
-    State(state): State<AppState>,
-) -> ApiResult<Json<db::MetricsSummary>> {
-    let summary = state
-        .db
-        .get_summary()
-        .await
-        .map_err(ApiError::Database)?;
+pub async fn summary_metrics(State(state): State<AppState>) -> ApiResult<Json<db::MetricsSummary>> {
+    let summary = state.db.get_summary().await.map_err(ApiError::Database)?;
 
     Ok(Json(summary))
 }

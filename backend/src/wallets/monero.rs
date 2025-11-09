@@ -491,7 +491,7 @@ impl MoneroWallet {
                 "Refreshed Monero wallet, fetched {} blocks",
                 result.blocks_fetched
             );
-}
+        }
 
         Ok(result.blocks_fetched)
     }

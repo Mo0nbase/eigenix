@@ -1,8 +1,4 @@
-use axum::{
-    extract::State,
-    routing::get,
-    Json, Router,
-};
+use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
 
 use crate::{ApiError, ApiResult, AppState};
@@ -29,9 +25,7 @@ pub struct BitcoinAddress {
 }
 
 /// Get Bitcoin wallet balance
-pub async fn get_balance(
-    State(state): State<AppState>,
-) -> ApiResult<Json<BitcoinBalance>> {
+pub async fn get_balance(State(state): State<AppState>) -> ApiResult<Json<BitcoinBalance>> {
     let balance = state
         .wallets
         .get_bitcoin_balance()
@@ -42,18 +36,14 @@ pub async fn get_balance(
 }
 
 /// Check Bitcoin wallet health
-pub async fn get_health(
-    State(state): State<AppState>,
-) -> ApiResult<Json<BitcoinHealth>> {
+pub async fn get_health(State(state): State<AppState>) -> ApiResult<Json<BitcoinHealth>> {
     let ready = state.wallets.bitcoin.is_ready().await;
 
     Ok(Json(BitcoinHealth { ready }))
 }
 
 /// Get a new Bitcoin deposit address
-pub async fn get_deposit_address(
-    State(state): State<AppState>,
-) -> ApiResult<Json<BitcoinAddress>> {
+pub async fn get_deposit_address(State(state): State<AppState>) -> ApiResult<Json<BitcoinAddress>> {
     let address = state
         .wallets
         .bitcoin
