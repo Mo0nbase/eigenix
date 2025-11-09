@@ -15,7 +15,7 @@
 }
 
 .status-card::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -45,7 +45,7 @@
     font-weight: bold;
     letter-spacing: 2px;
     text-shadow: 0 0 15px var(--status-color, transparent);
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
 }
 
 .status-value-sm {
@@ -76,7 +76,7 @@
     font-weight: bold;
     letter-spacing: 2px;
     text-shadow: 0 0 15px var(--status-color, transparent);
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     background: #333;
     height: 28px;
     border-radius: 2px;
@@ -88,10 +88,41 @@
 }
 
 @keyframes skeleton-pulse {
-    0%, 100% {
+    0%,
+    100% {
         opacity: 0.6;
     }
     50% {
         opacity: 1;
     }
+}
+
+/* Toggle Button Styles */
+.toggle-button {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid;
+    color: inherit;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+}
+
+.toggle-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px currentColor;
+}
+
+.toggle-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.toggle-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

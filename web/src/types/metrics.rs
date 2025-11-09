@@ -55,22 +55,44 @@ pub struct WalletHealth {
     pub monero_ready: bool,
 }
 
+/// Current state of the trading engine
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum TradingState {
+    Disabled,
+    Monitoring,
+    DepositingBitcoin { amount: f64 },
+    WaitingForBitcoinDeposit { txid: String },
+    Trading { btc_amount: f64 },
+    WaitingForTradeExecution { order_id: String },
+    WithdrawingMonero { amount: f64 },
+    WaitingForMoneroWithdrawal { refid: String },
+    Error { message: String },
+}
+
 /// Trading engine status
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TradingStatus {
+    pub state: TradingState,
     pub enabled: bool,
     pub last_check: Option<String>,
-    pub last_trade: Option<String>,
+    pub last_rebalance: Option<String>,
+    pub current_btc_balance: Option<f64>,
+    pub current_xmr_balance: Option<f64>,
+    pub kraken_btc_balance: Option<f64>,
+    pub kraken_xmr_balance: Option<f64>,
 }
 
 /// Trading configuration
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TradingConfig {
-    pub target_btc_percentage: f64,
-    pub rebalance_threshold_percentage: f64,
-    pub max_trade_size_btc: f64,
-    pub min_trade_size_btc: f64,
-    pub check_interval_seconds: u64,
+    pub monero_min_threshold: f64,
+    pub monero_target_balance: f64,
+    pub bitcoin_reserve_minimum: f64,
+    pub max_btc_per_rebalance: f64,
+    pub check_interval_secs: u64,
+    pub order_timeout_secs: u64,
+    pub slippage_tolerance_percent: f64,
+    pub use_limit_orders: bool,
 }
 
 /// Kraken ticker prices response
@@ -80,4 +102,3 @@ pub struct KrakenTickers {
     pub xmr_usd: f64,
     pub xmr_btc: f64,
 }
-

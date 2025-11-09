@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::types::metrics::TradingConfig;
+use dioxus::prelude::*;
 
 /// Skeleton version of config display for loading states
 #[component]
@@ -64,6 +64,39 @@ pub fn ConfigDisplaySkeleton() -> Element {
                     class: "skeleton-value skeleton-value-sm"
                 }
             }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
         }
     }
 }
@@ -81,11 +114,11 @@ pub fn ConfigDisplay(config: TradingConfig) -> Element {
                 class: "config-card",
                 h5 {
                     class: "config-label",
-                    "TARGET BTC %"
+                    "XMR MIN THRESHOLD"
                 }
                 p {
                     class: "config-value",
-                    "{config.target_btc_percentage}%"
+                    "{config.monero_min_threshold:.4} XMR"
                 }
             }
 
@@ -93,11 +126,11 @@ pub fn ConfigDisplay(config: TradingConfig) -> Element {
                 class: "config-card",
                 h5 {
                     class: "config-label",
-                    "REBALANCE THRESHOLD"
+                    "XMR TARGET BALANCE"
                 }
                 p {
                     class: "config-value",
-                    "{config.rebalance_threshold_percentage}%"
+                    "{config.monero_target_balance:.4} XMR"
                 }
             }
 
@@ -105,11 +138,11 @@ pub fn ConfigDisplay(config: TradingConfig) -> Element {
                 class: "config-card",
                 h5 {
                     class: "config-label",
-                    "MAX TRADE SIZE"
+                    "BTC RESERVE MIN"
                 }
                 p {
                     class: "config-value config-value-sm",
-                    "{config.max_trade_size_btc} BTC"
+                    "{config.bitcoin_reserve_minimum:.8} BTC"
                 }
             }
 
@@ -117,11 +150,11 @@ pub fn ConfigDisplay(config: TradingConfig) -> Element {
                 class: "config-card",
                 h5 {
                     class: "config-label",
-                    "MIN TRADE SIZE"
+                    "MAX BTC PER REBALANCE"
                 }
                 p {
                     class: "config-value config-value-sm",
-                    "{config.min_trade_size_btc} BTC"
+                    "{config.max_btc_per_rebalance:.8} BTC"
                 }
             }
 
@@ -133,7 +166,47 @@ pub fn ConfigDisplay(config: TradingConfig) -> Element {
                 }
                 p {
                     class: "config-value config-value-sm",
-                    "{config.check_interval_seconds}s"
+                    "{config.check_interval_secs}s"
+                }
+            }
+
+            div {
+                class: "config-card",
+                h5 {
+                    class: "config-label",
+                    "ORDER TIMEOUT"
+                }
+                p {
+                    class: "config-value config-value-sm",
+                    "{config.order_timeout_secs}s"
+                }
+            }
+
+            div {
+                class: "config-card",
+                h5 {
+                    class: "config-label",
+                    "SLIPPAGE TOLERANCE"
+                }
+                p {
+                    class: "config-value config-value-sm",
+                    "{config.slippage_tolerance_percent}%"
+                }
+            }
+
+            div {
+                class: "config-card",
+                h5 {
+                    class: "config-label",
+                    "ORDER TYPE"
+                }
+                p {
+                    class: "config-value config-value-sm",
+                    if config.use_limit_orders {
+                        "LIMIT ORDERS"
+                    } else {
+                        "MARKET ORDERS"
+                    }
                 }
             }
         }
