@@ -1233,6 +1233,7 @@ dependencies = [
  "chrono",
  "clap",
  "dotenvy",
+ "futures",
  "hmac",
  "monero",
  "monero-rpc",

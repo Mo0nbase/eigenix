@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
     let trading_engine = Arc::new(trading_engine);
 
     // Spawn background trading engine task
-    let trading_engine_clone = trading_engine.clone();
+    let trading_engine_clone = (*trading_engine).clone();
     tokio::spawn(async move {
         trading_engine_clone.run().await;
     });

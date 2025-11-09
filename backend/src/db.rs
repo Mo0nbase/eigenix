@@ -7,6 +7,52 @@ use surrealdb::Surreal;
 
 use crate::metrics::{AsbMetrics, BitcoinMetrics, ContainerMetrics, ElectrsMetrics, MoneroMetrics};
 
+/// Trading transaction type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionType {
+    /// Bitcoin deposit to exchange
+    BitcoinDeposit,
+    /// BTC to XMR trade on exchange
+    Trade,
+    /// Monero withdrawal from exchange
+    MoneroWithdrawal,
+}
+
+/// Trading transaction status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionStatus {
+    /// Transaction initiated
+    Pending,
+    /// Transaction confirmed/completed
+    Completed,
+    /// Transaction failed
+    Failed,
+    /// Transaction cancelled
+    Cancelled,
+}
+
+/// Database-stored trading transaction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredTradingTransaction {
+    #[serde(skip_deserializing)]
+    pub id: Option<String>,
+    pub timestamp: DateTime<Utc>,
+    pub transaction_type: TransactionType,
+    pub status: TransactionStatus,
+    pub btc_amount: Option<f64>,
+    pub xmr_amount: Option<f64>,
+    pub exchange_rate: Option<f64>,
+    pub txid: Option<String>,
+    pub order_id: Option<String>,
+    pub refid: Option<String>,
+    pub from_address: Option<String>,
+    pub to_address: Option<String>,
+    pub fee: Option<f64>,
+    pub notes: Option<String>,
+    pub error_message: Option<String>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
 /// Database-stored Bitcoin metrics with timestamp
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StoredBitcoinMetrics {
@@ -377,5 +423,177 @@ impl MetricsDatabase {
             electrs: self.get_latest_electrs_metrics().await?,
             containers: self.get_latest_container_metrics().await?,
         })
+    }
+
+    /// Store a trading transaction
+    pub async fn store_trading_transaction(
+        &self,
+        transaction: &StoredTradingTransaction,
+    ) -> Result<String> {
+        let result: Option<StoredTradingTransaction> = self
+            .db
+            .create("trading_transactions")
+            .content(transaction.clone())
+            .await
+            .context("Failed to store trading transaction")?;
+
+        // The response doesn't include the id field due to skip_deserializing
+        // So we need to query it back or use a different approach
+        // For now, let's use a query that returns the id explicitly
+        let mut response = self
+            .db
+            .query("CREATE trading_transactions CONTENT $transaction RETURN VALUE meta::id(id)")
+            .bind(("transaction", transaction.clone()))
+            .await
+            .context("Failed to store trading transaction")?;
+
+        let ids: Vec<String> = response.take(0).context("Failed to get transaction ID")?;
+        let id_string = ids.into_iter().next().context("No ID returned")?;
+
+        Ok(id_string)
+    }
+
+    /// Update a trading transaction
+    pub async fn update_trading_transaction(
+        &self,
+        id: &str,
+        transaction: &StoredTradingTransaction,
+    ) -> Result<()> {
+        let _: Option<StoredTradingTransaction> = self
+            .db
+            .update(("trading_transactions", id))
+            .content(transaction.clone())
+            .await
+            .context("Failed to update trading transaction")?;
+
+        Ok(())
+    }
+
+    /// Get a trading transaction by ID
+    pub async fn get_trading_transaction(
+        &self,
+        id: &str,
+    ) -> Result<Option<StoredTradingTransaction>> {
+        let result: Option<StoredTradingTransaction> = self
+            .db
+            .select(("trading_transactions", id))
+            .await
+            .context("Failed to get trading transaction")?;
+
+        Ok(result)
+    }
+
+    /// Get all trading transactions within a time range
+    pub async fn get_trading_transactions(
+        &self,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+    ) -> Result<Vec<StoredTradingTransaction>> {
+        let result: Vec<StoredTradingTransaction> = self
+            .db
+            .query("SELECT * FROM trading_transactions WHERE timestamp >= $from AND timestamp <= $to ORDER BY timestamp DESC")
+            .bind(("from", from))
+            .bind(("to", to))
+            .await
+            .context("Failed to query trading transactions")?
+            .take(0)
+            .context("Failed to parse trading transactions")?;
+
+        Ok(result)
+    }
+
+    /// Get recent trading transactions
+    pub async fn get_recent_trading_transactions(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<StoredTradingTransaction>> {
+        let result: Vec<StoredTradingTransaction> = self
+            .db
+            .query("SELECT * FROM trading_transactions ORDER BY timestamp DESC LIMIT $limit")
+            .bind(("limit", limit))
+            .await
+            .context("Failed to query recent trading transactions")?
+            .take(0)
+            .context("Failed to parse trading transactions")?;
+
+        Ok(result)
+    }
+
+    /// Get trading transactions by status
+    pub async fn get_trading_transactions_by_status(
+        &self,
+        status: TransactionStatus,
+    ) -> Result<Vec<StoredTradingTransaction>> {
+        let status_str = format!("{:?}", status);
+        let result: Vec<StoredTradingTransaction> = self
+            .db
+            .query(
+                "SELECT * FROM trading_transactions WHERE status = $status ORDER BY timestamp DESC",
+            )
+            .bind(("status", status_str))
+            .await
+            .context("Failed to query trading transactions by status")?
+            .take(0)
+            .context("Failed to parse trading transactions")?;
+
+        Ok(result)
+    }
+
+    /// Get trading transactions by type
+    pub async fn get_trading_transactions_by_type(
+        &self,
+        transaction_type: TransactionType,
+    ) -> Result<Vec<StoredTradingTransaction>> {
+        let type_str = format!("{:?}", transaction_type);
+        let result: Vec<StoredTradingTransaction> = self
+            .db
+            .query("SELECT * FROM trading_transactions WHERE transaction_type = $type ORDER BY timestamp DESC")
+            .bind(("type", type_str))
+            .await
+            .context("Failed to query trading transactions by type")?
+            .take(0)
+            .context("Failed to parse trading transactions")?;
+
+        Ok(result)
+    }
+
+    /// Mark a transaction as completed
+    pub async fn complete_trading_transaction(
+        &self,
+        id: &str,
+        xmr_amount: Option<f64>,
+        exchange_rate: Option<f64>,
+    ) -> Result<()> {
+        let mut transaction = self
+            .get_trading_transaction(id)
+            .await?
+            .context("Transaction not found")?;
+
+        transaction.status = TransactionStatus::Completed;
+        transaction.completed_at = Some(Utc::now());
+        if let Some(amount) = xmr_amount {
+            transaction.xmr_amount = Some(amount);
+        }
+        if let Some(rate) = exchange_rate {
+            transaction.exchange_rate = Some(rate);
+        }
+
+        self.update_trading_transaction(id, &transaction).await?;
+        Ok(())
+    }
+
+    /// Mark a transaction as failed
+    pub async fn fail_trading_transaction(&self, id: &str, error_message: String) -> Result<()> {
+        let mut transaction = self
+            .get_trading_transaction(id)
+            .await?
+            .context("Transaction not found")?;
+
+        transaction.status = TransactionStatus::Failed;
+        transaction.error_message = Some(error_message);
+        transaction.completed_at = Some(Utc::now());
+
+        self.update_trading_transaction(id, &transaction).await?;
+        Ok(())
     }
 }

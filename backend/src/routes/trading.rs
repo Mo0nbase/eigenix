@@ -25,10 +25,7 @@ pub struct EnableResponse {
 
 /// Get trading engine status
 pub async fn get_status(State(state): State<AppState>) -> ApiResult<Json<TradingStatus>> {
-    let status = state
-        .trading_engine
-        .get_status()
-        .await;
+    let status = state.trading_engine.get_status().await;
 
     Ok(Json(status))
 }
@@ -81,4 +78,3 @@ pub fn trading_routes() -> Router<AppState> {
         .route("/config", put(update_config))
         .route("/enable", post(set_enabled))
 }
-
