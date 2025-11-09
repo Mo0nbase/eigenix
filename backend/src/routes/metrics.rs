@@ -6,7 +6,7 @@ use axum::{
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 
-use crate::{db, AppState};
+use crate::{db, ApiError, ApiResult, AppState};
 
 /// Query parameters for historical metrics
 #[derive(Deserialize)]
@@ -32,13 +32,13 @@ pub struct IntervalQuery {
 /// Get latest Bitcoin metrics
 pub async fn bitcoin_metrics(
     State(state): State<AppState>,
-) -> Result<Json<db::StoredBitcoinMetrics>, String> {
+) -> ApiResult<Json<db::StoredBitcoinMetrics>> {
     let metrics = state
         .db
         .get_latest_bitcoin_metrics()
         .await
-        .map_err(|e| format!("Failed to get Bitcoin metrics: {}", e))?
-        .ok_or_else(|| "No Bitcoin metrics available".to_string())?;
+        .map_err(ApiError::Database)?
+        .ok_or_else(|| ApiError::NotFound("No Bitcoin metrics available".to_string()))?;
 
     Ok(Json(metrics))
 }
@@ -46,25 +46,25 @@ pub async fn bitcoin_metrics(
 /// Get latest Monero metrics
 pub async fn monero_metrics(
     State(state): State<AppState>,
-) -> Result<Json<db::StoredMoneroMetrics>, String> {
+) -> ApiResult<Json<db::StoredMoneroMetrics>> {
     let metrics = state
         .db
         .get_latest_monero_metrics()
         .await
-        .map_err(|e| format!("Failed to get Monero metrics: {}", e))?
-        .ok_or_else(|| "No Monero metrics available".to_string())?;
+        .map_err(ApiError::Database)?
+        .ok_or_else(|| ApiError::NotFound("No Monero metrics available".to_string()))?;
 
     Ok(Json(metrics))
 }
 
 /// Get latest ASB metrics
-pub async fn asb_metrics(State(state): State<AppState>) -> Result<Json<db::StoredAsbMetrics>, String> {
+pub async fn asb_metrics(State(state): State<AppState>) -> ApiResult<Json<db::StoredAsbMetrics>> {
     let metrics = state
         .db
         .get_latest_asb_metrics()
         .await
-        .map_err(|e| format!("Failed to get ASB metrics: {}", e))?
-        .ok_or_else(|| "No ASB metrics available".to_string())?;
+        .map_err(ApiError::Database)?
+        .ok_or_else(|| ApiError::NotFound("No ASB metrics available".to_string()))?;
 
     Ok(Json(metrics))
 }
@@ -72,13 +72,13 @@ pub async fn asb_metrics(State(state): State<AppState>) -> Result<Json<db::Store
 /// Get latest Electrs metrics
 pub async fn electrs_metrics(
     State(state): State<AppState>,
-) -> Result<Json<db::StoredElectrsMetrics>, String> {
+) -> ApiResult<Json<db::StoredElectrsMetrics>> {
     let metrics = state
         .db
         .get_latest_electrs_metrics()
         .await
-        .map_err(|e| format!("Failed to get Electrs metrics: {}", e))?
-        .ok_or_else(|| "No Electrs metrics available".to_string())?;
+        .map_err(ApiError::Database)?
+        .ok_or_else(|| ApiError::NotFound("No Electrs metrics available".to_string()))?;
 
     Ok(Json(metrics))
 }
@@ -86,12 +86,12 @@ pub async fn electrs_metrics(
 /// Get latest container metrics
 pub async fn container_metrics(
     State(state): State<AppState>,
-) -> Result<Json<Vec<db::StoredContainerMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredContainerMetrics>>> {
     let metrics = state
         .db
         .get_latest_container_metrics()
         .await
-        .map_err(|e| format!("Failed to get container metrics: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(metrics))
 }
@@ -99,12 +99,12 @@ pub async fn container_metrics(
 /// Get metrics summary
 pub async fn summary_metrics(
     State(state): State<AppState>,
-) -> Result<Json<db::MetricsSummary>, String> {
+) -> ApiResult<Json<db::MetricsSummary>> {
     let summary = state
         .db
         .get_summary()
         .await
-        .map_err(|e| format!("Failed to get metrics summary: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(summary))
 }
@@ -113,7 +113,7 @@ pub async fn summary_metrics(
 pub async fn bitcoin_history(
     State(state): State<AppState>,
     Query(query): Query<HistoryQuery>,
-) -> Result<Json<Vec<db::StoredBitcoinMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredBitcoinMetrics>>> {
     let to = query.to.unwrap_or_else(Utc::now);
     let from = query.from.unwrap_or_else(|| to - Duration::hours(24));
 
@@ -121,7 +121,7 @@ pub async fn bitcoin_history(
         .db
         .get_bitcoin_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Bitcoin history: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -130,7 +130,7 @@ pub async fn bitcoin_history(
 pub async fn monero_history(
     State(state): State<AppState>,
     Query(query): Query<HistoryQuery>,
-) -> Result<Json<Vec<db::StoredMoneroMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredMoneroMetrics>>> {
     let to = query.to.unwrap_or_else(Utc::now);
     let from = query.from.unwrap_or_else(|| to - Duration::hours(24));
 
@@ -138,7 +138,7 @@ pub async fn monero_history(
         .db
         .get_monero_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Monero history: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -147,7 +147,7 @@ pub async fn monero_history(
 pub async fn asb_history(
     State(state): State<AppState>,
     Query(query): Query<HistoryQuery>,
-) -> Result<Json<Vec<db::StoredAsbMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredAsbMetrics>>> {
     let to = query.to.unwrap_or_else(Utc::now);
     let from = query.from.unwrap_or_else(|| to - Duration::hours(24));
 
@@ -155,7 +155,7 @@ pub async fn asb_history(
         .db
         .get_asb_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -164,7 +164,7 @@ pub async fn asb_history(
 pub async fn electrs_history(
     State(state): State<AppState>,
     Query(query): Query<HistoryQuery>,
-) -> Result<Json<Vec<db::StoredElectrsMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredElectrsMetrics>>> {
     let to = query.to.unwrap_or_else(Utc::now);
     let from = query.from.unwrap_or_else(|| to - Duration::hours(24));
 
@@ -172,7 +172,7 @@ pub async fn electrs_history(
         .db
         .get_electrs_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Electrs history: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -181,7 +181,7 @@ pub async fn electrs_history(
 pub async fn container_history(
     State(state): State<AppState>,
     Query(query): Query<ContainerHistoryQuery>,
-) -> Result<Json<Vec<db::StoredContainerMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredContainerMetrics>>> {
     let to = query.to.unwrap_or_else(Utc::now);
     let from = query.from.unwrap_or_else(|| to - Duration::hours(24));
 
@@ -189,7 +189,7 @@ pub async fn container_history(
         .db
         .get_container_history(&query.name, from, to)
         .await
-        .map_err(|e| format!("Failed to get container history: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -198,7 +198,7 @@ pub async fn container_history(
 pub async fn bitcoin_interval(
     State(state): State<AppState>,
     Query(query): Query<IntervalQuery>,
-) -> Result<Json<Vec<db::StoredBitcoinMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredBitcoinMetrics>>> {
     let minutes = query.minutes.unwrap_or(5);
     let to = Utc::now();
     let from = to - Duration::minutes(minutes);
@@ -207,7 +207,7 @@ pub async fn bitcoin_interval(
         .db
         .get_bitcoin_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Bitcoin interval metrics: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -216,7 +216,7 @@ pub async fn bitcoin_interval(
 pub async fn monero_interval(
     State(state): State<AppState>,
     Query(query): Query<IntervalQuery>,
-) -> Result<Json<Vec<db::StoredMoneroMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredMoneroMetrics>>> {
     let minutes = query.minutes.unwrap_or(5);
     let to = Utc::now();
     let from = to - Duration::minutes(minutes);
@@ -225,7 +225,7 @@ pub async fn monero_interval(
         .db
         .get_monero_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Monero interval metrics: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -234,7 +234,7 @@ pub async fn monero_interval(
 pub async fn asb_interval(
     State(state): State<AppState>,
     Query(query): Query<IntervalQuery>,
-) -> Result<Json<Vec<db::StoredAsbMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredAsbMetrics>>> {
     let minutes = query.minutes.unwrap_or(5);
     let to = Utc::now();
     let from = to - Duration::minutes(minutes);
@@ -243,7 +243,7 @@ pub async fn asb_interval(
         .db
         .get_asb_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get ASB interval metrics: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }
@@ -252,7 +252,7 @@ pub async fn asb_interval(
 pub async fn electrs_interval(
     State(state): State<AppState>,
     Query(query): Query<IntervalQuery>,
-) -> Result<Json<Vec<db::StoredElectrsMetrics>>, String> {
+) -> ApiResult<Json<Vec<db::StoredElectrsMetrics>>> {
     let minutes = query.minutes.unwrap_or(5);
     let to = Utc::now();
     let from = to - Duration::minutes(minutes);
@@ -261,7 +261,7 @@ pub async fn electrs_interval(
         .db
         .get_electrs_history(from, to)
         .await
-        .map_err(|e| format!("Failed to get Electrs interval metrics: {}", e))?;
+        .map_err(ApiError::Database)?;
 
     Ok(Json(history))
 }

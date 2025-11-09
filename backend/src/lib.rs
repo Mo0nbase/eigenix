@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub mod config;
 pub mod db;
+pub mod error;
 pub mod metrics;
 pub mod routes;
 pub mod services;
@@ -15,6 +16,7 @@ pub mod wallets;
 // Re-export commonly used types
 pub use config::Config;
 pub use db::MetricsDatabase;
+pub use error::{ApiError, ApiResult};
 pub use services::{AsbClient, BitcoinRpcClient, KrakenClient, MoneroRpcClient};
 pub use wallets::{BitcoinWallet, MoneroWallet, WalletConfig, WalletManager};
 

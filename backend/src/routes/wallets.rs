@@ -6,7 +6,7 @@ use axum::{
 use serde::Serialize;
 
 use crate::routes::{bitcoin, monero};
-use crate::AppState;
+use crate::{ApiError, ApiResult, AppState};
 
 /// Combined wallet balances response
 #[derive(Serialize)]
@@ -32,12 +32,12 @@ pub struct WalletHealth {
 /// Get combined balances for both Bitcoin and Monero wallets
 pub async fn get_balances(
     State(state): State<AppState>,
-) -> Result<Json<WalletBalances>, String> {
+) -> ApiResult<Json<WalletBalances>> {
     let (bitcoin, monero) = state
         .wallets
         .get_balances()
         .await
-        .map_err(|e| format!("Failed to get wallet balances: {}", e))?;
+        .map_err(ApiError::Wallet)?;
 
     Ok(Json(WalletBalances { bitcoin, monero }))
 }
@@ -45,7 +45,7 @@ pub async fn get_balances(
 /// Check wallet health status
 pub async fn get_wallet_health(
     State(state): State<AppState>,
-) -> Result<Json<WalletHealth>, String> {
+) -> ApiResult<Json<WalletHealth>> {
     let healthy = state.wallets.is_healthy().await;
     let bitcoin_ready = state.wallets.bitcoin.is_ready().await;
     let monero_ready = state.wallets.monero.is_ready().await;

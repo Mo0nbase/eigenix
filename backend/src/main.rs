@@ -5,7 +5,6 @@ use axum::{
 use clap::Parser;
 use serde::Serialize;
 use std::{net::SocketAddr, sync::Arc};
-use tokio::time::{interval, Duration as TokioDuration};
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber;
 
@@ -13,7 +12,7 @@ use anyhow::Context;
 use eigenix_backend::{
     config::{Cli, Config},
     db::MetricsDatabase,
-    metrics,
+    metrics::MetricsCollector,
     routes,
     wallets::WalletManager,
     AppState,
@@ -32,78 +31,6 @@ async fn health() -> Json<Health> {
     })
 }
 
-async fn collect_metrics(config: Arc<Config>, db: MetricsDatabase) {
-    let mut interval = interval(TokioDuration::from_secs(60));
-
-    loop {
-        interval.tick().await;
-
-        tracing::info!("Collecting metrics...");
-
-        // Collect Bitcoin metrics
-        if let Ok(client) = metrics::BitcoinRpcClient::new(
-            config.bitcoin.rpc_url.clone(),
-            &config.bitcoin.cookie_path,
-        ) {
-            match client.get_metrics().await {
-                Ok(metrics) => {
-                    if let Err(e) = db.store_bitcoin_metrics(&metrics).await {
-                        tracing::error!("Failed to store Bitcoin metrics: {}", e);
-                    }
-                }
-                Err(e) => tracing::error!("Failed to collect Bitcoin metrics: {}", e),
-            }
-        }
-
-        // Collect Monero metrics
-        let monero_client = metrics::MoneroRpcClient::new(config.monero.rpc_url.clone());
-        match monero_client.get_metrics().await {
-            Ok(metrics) => {
-                if let Err(e) = db.store_monero_metrics(&metrics).await {
-                    tracing::error!("Failed to store Monero metrics: {}", e);
-                }
-            }
-            Err(e) => tracing::error!("Failed to collect Monero metrics: {}", e),
-        }
-
-        // Collect ASB metrics
-        let asb_client = metrics::AsbRpcClient::new(config.asb.rpc_url.clone());
-        match asb_client.get_metrics().await {
-            Ok(metrics) => {
-                if let Err(e) = db.store_asb_metrics(&metrics).await {
-                    tracing::error!("Failed to store ASB metrics: {}", e);
-                }
-            }
-            Err(e) => tracing::error!("Failed to collect ASB metrics: {}", e),
-        }
-
-        // Collect Electrs metrics
-        let electrs_client = metrics::ElectrsClient::new("electrs".to_string());
-        match electrs_client.get_metrics().await {
-            Ok(metrics) => {
-                if let Err(e) = db.store_electrs_metrics(&metrics).await {
-                    tracing::error!("Failed to store Electrs metrics: {}", e);
-                }
-            }
-            Err(e) => tracing::error!("Failed to collect Electrs metrics: {}", e),
-        }
-
-        // Collect Container metrics
-        let container_client = metrics::ContainerHealthClient::new();
-        let container_refs: Vec<&str> =
-            config.containers.names.iter().map(|s| s.as_str()).collect();
-        match container_client.get_metrics(&container_refs).await {
-            Ok(metrics) => {
-                if let Err(e) = db.store_container_metrics(&metrics).await {
-                    tracing::error!("Failed to store container metrics: {}", e);
-                }
-            }
-            Err(e) => tracing::error!("Failed to collect container metrics: {}", e),
-        }
-
-        tracing::info!("Metrics collection complete");
-    }
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -149,10 +76,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Spawn background metrics collection task
-    let metrics_config = config.clone();
-    let metrics_db = db.clone();
+    let collector = MetricsCollector::new(config.clone(), db.clone());
     tokio::spawn(async move {
-        collect_metrics(metrics_config, metrics_db).await;
+        collector.run().await;
     });
     tracing::info!("Started background metrics collection task");
 

@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::AppState;
+use crate::{ApiError, ApiResult, AppState};
 
 /// Bitcoin wallet balance response
 #[derive(Serialize)]
@@ -24,12 +24,12 @@ pub struct BitcoinHealth {
 /// Get Bitcoin wallet balance
 pub async fn get_balance(
     State(state): State<AppState>,
-) -> Result<Json<BitcoinBalance>, String> {
+) -> ApiResult<Json<BitcoinBalance>> {
     let balance = state
         .wallets
         .get_bitcoin_balance()
         .await
-        .map_err(|e| format!("Failed to get Bitcoin balance: {}", e))?;
+        .map_err(ApiError::Wallet)?;
 
     Ok(Json(BitcoinBalance { balance }))
 }
@@ -37,7 +37,7 @@ pub async fn get_balance(
 /// Check Bitcoin wallet health
 pub async fn get_health(
     State(state): State<AppState>,
-) -> Result<Json<BitcoinHealth>, String> {
+) -> ApiResult<Json<BitcoinHealth>> {
     let ready = state.wallets.bitcoin.is_ready().await;
 
     Ok(Json(BitcoinHealth { ready }))

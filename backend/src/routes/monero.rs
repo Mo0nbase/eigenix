@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::AppState;
+use crate::{ApiError, ApiResult, AppState};
 
 /// Monero wallet balance response
 #[derive(Serialize)]
@@ -31,12 +31,12 @@ pub struct RefreshResponse {
 /// Get Monero wallet balance
 pub async fn get_balance(
     State(state): State<AppState>,
-) -> Result<Json<MoneroBalance>, String> {
+) -> ApiResult<Json<MoneroBalance>> {
     let balance = state
         .wallets
         .get_monero_balance()
         .await
-        .map_err(|e| format!("Failed to get Monero balance: {}", e))?;
+        .map_err(ApiError::Wallet)?;
 
     Ok(Json(MoneroBalance { balance }))
 }
@@ -44,7 +44,7 @@ pub async fn get_balance(
 /// Check Monero wallet health
 pub async fn get_health(
     State(state): State<AppState>,
-) -> Result<Json<MoneroHealth>, String> {
+) -> ApiResult<Json<MoneroHealth>> {
     let ready = state.wallets.monero.is_ready().await;
 
     Ok(Json(MoneroHealth { ready }))
@@ -53,12 +53,12 @@ pub async fn get_health(
 /// Refresh Monero wallet to sync with blockchain
 pub async fn refresh_wallet(
     State(state): State<AppState>,
-) -> Result<Json<RefreshResponse>, String> {
+) -> ApiResult<Json<RefreshResponse>> {
     let height = state
         .wallets
         .refresh_monero()
         .await
-        .map_err(|e| format!("Failed to refresh Monero wallet: {}", e))?;
+        .map_err(ApiError::Wallet)?;
 
     Ok(Json(RefreshResponse { height }))
 }
