@@ -34,7 +34,7 @@ impl Default for TradingConfig {
         Self {
             monero_min_threshold: 1.0,        // Rebalance if XMR drops below 1.0
             monero_target_balance: 5.0,       // Target 5.0 XMR after rebalancing
-            bitcoin_reserve_minimum: 0.00001, // Keep at least 0.01 BTC
+            bitcoin_reserve_minimum: 0.00001, // Keep at least 0.00001 BTC
             max_btc_per_rebalance: 0.01,      // Max 0.1 BTC per operation
             check_interval_secs: 300,         // Check every 5 minutes
             order_timeout_secs: 600,          // Wait max 10 minutes for order
