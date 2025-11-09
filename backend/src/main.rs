@@ -11,6 +11,7 @@ use eigenix_backend::{
     db::MetricsDatabase,
     metrics::MetricsCollector,
     routes,
+    trading::{config::SharedTradingConfig, TradingEngine},
     wallets::WalletManager,
     AppState,
 };
@@ -78,11 +79,35 @@ async fn main() -> anyhow::Result<()> {
     });
     tracing::info!("Started background metrics collection task");
 
+    // Initialize trading engine
+    tracing::info!("Initializing trading engine...");
+    let trading_config = SharedTradingConfig::default();
+    let trading_engine = TradingEngine::new(
+        trading_config,
+        config.kraken.api_key.clone(),
+        config.kraken.api_secret.clone(),
+        config.bitcoin.rpc_url.clone(),
+        config.bitcoin.cookie_path.clone(),
+        config.wallets.bitcoin_wallet_name.clone(),
+        config.wallets.monero_wallet_rpc_url.clone(),
+        config.wallets.monero_wallet_name.clone(),
+        config.wallets.monero_wallet_password.clone(),
+    );
+    let trading_engine = Arc::new(trading_engine);
+
+    // Spawn background trading engine task
+    let trading_engine_clone = trading_engine.clone();
+    tokio::spawn(async move {
+        trading_engine_clone.run().await;
+    });
+    tracing::info!("Started background trading engine task (disabled by default)");
+
     // Create application state
     let state = AppState {
         config: config.clone(),
         db,
         wallets,
+        trading_engine,
     };
 
     // Build our application with routes
@@ -90,6 +115,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health))
         .nest("/wallets", routes::wallets::wallet_routes())
         .nest("/metrics", routes::metrics::metrics_routes())
+        .nest("/trading", routes::trading::trading_routes())
         .with_state(state)
         .layer(
             CorsLayer::new()

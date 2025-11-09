@@ -55,6 +55,7 @@ pub struct Config {
     pub monero: MoneroConfig,
     pub asb: AsbConfig,
     pub wallets: WalletsConfig,
+    pub kraken: KrakenConfig,
     pub containers: ContainerConfig,
 }
 
@@ -102,6 +103,16 @@ pub struct WalletsConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KrakenConfig {
+    /// Kraken API key (loaded from environment variable KRAKEN_API_KEY)
+    #[serde(skip_serializing)]
+    pub api_key: String,
+    /// Kraken API secret (loaded from environment variable KRAKEN_API_SECRET)
+    #[serde(skip_serializing)]
+    pub api_secret: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContainerConfig {
     pub names: Vec<String>,
 }
@@ -134,6 +145,10 @@ impl Default for Config {
                 monero_wallet_name: "eigenix".to_string(),
                 monero_wallet_password: "".to_string(),
                 monero_wallet_rpc_url: "http://127.0.0.1:18082/json_rpc".to_string(),
+            },
+            kraken: KrakenConfig {
+                api_key: std::env::var("KRAKEN_API_KEY").unwrap_or_default(),
+                api_secret: std::env::var("KRAKEN_API_SECRET").unwrap_or_default(),
             },
             containers: ContainerConfig {
                 names: vec![
