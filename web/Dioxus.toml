@@ -5,6 +5,14 @@ default_platform = "web"
 [web.app]
 title = "Eigenix"
 
+[web.watcher]
+
+[web.server]
+addr = "0.0.0.0"
+port = 9090
+
+[bundler]
+
 # include `assets` in web platform
 [web.resource]
 

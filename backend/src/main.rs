@@ -209,6 +209,79 @@ async fn container_history(
     Ok(Json(history))
 }
 
+#[derive(Deserialize)]
+struct IntervalQuery {
+    minutes: Option<i64>,
+}
+
+async fn bitcoin_interval(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<db::StoredBitcoinMetrics>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_bitcoin_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get Bitcoin interval metrics: {}", e))?;
+
+    Ok(Json(history))
+}
+
+async fn monero_interval(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<db::StoredMoneroMetrics>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_monero_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get Monero interval metrics: {}", e))?;
+
+    Ok(Json(history))
+}
+
+async fn asb_interval(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<db::StoredAsbMetrics>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB interval metrics: {}", e))?;
+
+    Ok(Json(history))
+}
+
+async fn electrs_interval(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<db::StoredElectrsMetrics>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_electrs_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get Electrs interval metrics: {}", e))?;
+
+    Ok(Json(history))
+}
+
 async fn collect_metrics(config: Arc<Config>, db: MetricsDatabase) {
     let mut interval = interval(TokioDuration::from_secs(60));
 
@@ -346,12 +419,16 @@ async fn main() -> anyhow::Result<()> {
         .route("/metrics/summary", get(summary_metrics))
         .route("/metrics/bitcoin", get(bitcoin_metrics))
         .route("/metrics/bitcoin/history", get(bitcoin_history))
+        .route("/metrics/bitcoin/interval", get(bitcoin_interval))
         .route("/metrics/monero", get(monero_metrics))
         .route("/metrics/monero/history", get(monero_history))
+        .route("/metrics/monero/interval", get(monero_interval))
         .route("/metrics/asb", get(asb_metrics))
         .route("/metrics/asb/history", get(asb_history))
+        .route("/metrics/asb/interval", get(asb_interval))
         .route("/metrics/electrs", get(electrs_metrics))
         .route("/metrics/electrs/history", get(electrs_history))
+        .route("/metrics/electrs/interval", get(electrs_interval))
         .route("/metrics/containers", get(container_metrics))
         .route("/metrics/containers/history", get(container_history))
         .with_state(state)
