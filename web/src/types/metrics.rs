@@ -78,6 +78,6 @@ pub struct TradingConfig {
 pub struct KrakenTickers {
     pub btc_usd: f64,
     pub xmr_usd: f64,
-    pub btc_xmr: f64,
+    pub xmr_btc: f64,
 }
 

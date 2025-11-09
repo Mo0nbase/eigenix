@@ -71,11 +71,11 @@ pub fn TickerDisplay(tickers: KrakenTickers) -> Element {
                 class: "ticker-item",
                 span {
                     class: "ticker-label",
-                    "BTC/XMR:"
+                    "XMR/BTC:"
                 }
                 span {
                     class: "ticker-value ticker-pair",
-                    "{tickers.btc_xmr:.2}"
+                    "{tickers.xmr_btc:.8}"
                 }
             }
         }

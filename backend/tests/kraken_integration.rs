@@ -26,12 +26,12 @@ async fn test_kraken_client_creation() {
 }
 
 #[tokio::test]
-async fn test_kraken_public_ticker() {
+async fn test_kraken_public_ticker_btcusd() {
     let (api_key, api_secret) = TestConfig::kraken();
     let client = KrakenClient::new(api_key, api_secret);
 
-    // Test public ticker endpoint (doesn't require authentication)
-    let ticker_result = client.get_ticker("XBTXMR").await;
+    // Test BTC/USD ticker (public endpoint, no auth required)
+    let ticker_result = client.get_ticker("XBTUSD").await;
 
     match ticker_result {
         Ok(ticker) => {
@@ -41,17 +41,124 @@ async fn test_kraken_public_ticker() {
             assert!(!ticker.last_trade.is_empty(), "Last trade should not be empty");
             assert!(!ticker.volume.is_empty(), "Volume should not be empty");
 
-            // Verify price data is numeric
+            // Verify price data is numeric and reasonable
             let ask_price: f64 = ticker.ask[0].parse().expect("Ask price should be numeric");
             let bid_price: f64 = ticker.bid[0].parse().expect("Bid price should be numeric");
+            let last_price: f64 = ticker.last_trade[0].parse().expect("Last trade should be numeric");
+            
             assert!(ask_price > 0.0, "Ask price should be positive");
             assert!(bid_price > 0.0, "Bid price should be positive");
+            assert!(last_price > 0.0, "Last price should be positive");
             assert!(ask_price >= bid_price, "Ask should be >= bid");
+            assert!(ask_price > 1000.0 && ask_price < 500000.0, "BTC/USD price should be reasonable");
+            
+            println!("✅ BTC/USD: Bid ${:.2}, Ask ${:.2}, Last ${:.2}", bid_price, ask_price, last_price);
         }
         Err(e) => {
-            eprintln!("⚠️  Kraken ticker test failed (network/API issue): {}", e);
-            // Don't fail the test for network/API issues, only for our code bugs
+            eprintln!("⚠️  BTC/USD ticker test failed (network/API issue): {}", e);
         }
+    }
+}
+
+#[tokio::test]
+async fn test_kraken_public_ticker_xmrusd() {
+    let (api_key, api_secret) = TestConfig::kraken();
+    let client = KrakenClient::new(api_key, api_secret);
+
+    // Test XMR/USD ticker (public endpoint, no auth required)
+    let ticker_result = client.get_ticker("XMRUSD").await;
+
+    match ticker_result {
+        Ok(ticker) => {
+            // Verify ticker data structure
+            assert!(!ticker.ask.is_empty(), "Ask prices should not be empty");
+            assert!(!ticker.bid.is_empty(), "Bid prices should not be empty");
+            assert!(!ticker.last_trade.is_empty(), "Last trade should not be empty");
+
+            // Verify price data is numeric and reasonable
+            let ask_price: f64 = ticker.ask[0].parse().expect("Ask price should be numeric");
+            let bid_price: f64 = ticker.bid[0].parse().expect("Bid price should be numeric");
+            let last_price: f64 = ticker.last_trade[0].parse().expect("Last trade should be numeric");
+            
+            assert!(ask_price > 0.0, "Ask price should be positive");
+            assert!(bid_price > 0.0, "Bid price should be positive");
+            assert!(last_price > 0.0, "Last price should be positive");
+            assert!(ask_price >= bid_price, "Ask should be >= bid");
+            assert!(ask_price > 10.0 && ask_price < 10000.0, "XMR/USD price should be reasonable");
+            
+            println!("✅ XMR/USD: Bid ${:.2}, Ask ${:.2}, Last ${:.2}", bid_price, ask_price, last_price);
+        }
+        Err(e) => {
+            eprintln!("⚠️  XMR/USD ticker test failed (network/API issue): {}", e);
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_kraken_public_ticker_xmrbtc() {
+    let (api_key, api_secret) = TestConfig::kraken();
+    let client = KrakenClient::new(api_key, api_secret);
+
+    // Test XMR/BTC ticker (public endpoint, no auth required)
+    let ticker_result = client.get_ticker("XMRXBT").await;
+
+    match ticker_result {
+        Ok(ticker) => {
+            // Verify ticker data structure
+            assert!(!ticker.ask.is_empty(), "Ask prices should not be empty");
+            assert!(!ticker.bid.is_empty(), "Bid prices should not be empty");
+            assert!(!ticker.last_trade.is_empty(), "Last trade should not be empty");
+
+            // Verify price data is numeric and reasonable
+            let ask_price: f64 = ticker.ask[0].parse().expect("Ask price should be numeric");
+            let bid_price: f64 = ticker.bid[0].parse().expect("Bid price should be numeric");
+            let last_price: f64 = ticker.last_trade[0].parse().expect("Last trade should be numeric");
+            
+            assert!(ask_price > 0.0, "Ask price should be positive");
+            assert!(bid_price > 0.0, "Bid price should be positive");
+            assert!(last_price > 0.0, "Last price should be positive");
+            assert!(ask_price >= bid_price, "Ask should be >= bid");
+            assert!(ask_price > 0.0001 && ask_price < 1.0, "XMR/BTC price should be reasonable");
+            
+            println!("✅ XMR/BTC: Bid {:.8}, Ask {:.8}, Last {:.8}", bid_price, ask_price, last_price);
+        }
+        Err(e) => {
+            eprintln!("⚠️  XMR/BTC ticker test failed (network/API issue): {}", e);
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_kraken_all_tickers() {
+    let (api_key, api_secret) = TestConfig::kraken();
+    let client = KrakenClient::new(api_key, api_secret);
+
+    println!("Testing all three ticker endpoints...");
+
+    // Test all three tickers that our API endpoint uses
+    let btc_usd = client.get_ticker("XBTUSD").await;
+    let xmr_usd = client.get_ticker("XMRUSD").await;
+    let xmr_btc = client.get_ticker("XMRXBT").await;
+
+    if let Ok(t) = btc_usd {
+        let price: f64 = t.last_trade[0].parse().unwrap_or(0.0);
+        println!("✅ BTC/USD: ${:.2}", price);
+    } else {
+        eprintln!("❌ BTC/USD failed");
+    }
+
+    if let Ok(t) = xmr_usd {
+        let price: f64 = t.last_trade[0].parse().unwrap_or(0.0);
+        println!("✅ XMR/USD: ${:.2}", price);
+    } else {
+        eprintln!("❌ XMR/USD failed");
+    }
+
+    if let Ok(t) = xmr_btc {
+        let price: f64 = t.last_trade[0].parse().unwrap_or(0.0);
+        println!("✅ XMR/BTC: {:.8}", price);
+    } else {
+        eprintln!("❌ XMR/BTC failed");
     }
 }
 
