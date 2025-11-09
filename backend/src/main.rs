@@ -114,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health))
         .nest("/wallets", routes::wallets::wallet_routes())
+        .nest("/kraken", routes::kraken::kraken_routes())
         .nest("/metrics", routes::metrics::metrics_routes())
         .nest("/trading", routes::trading::trading_routes())
         .with_state(state)

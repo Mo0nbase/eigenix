@@ -1,0 +1,109 @@
+/* Ticker Component Styles */
+
+.ticker-container {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #b0b0b0;
+}
+
+.ticker-display {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid #333;
+    background: rgba(26, 26, 26, 0.8);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.ticker-item:hover {
+    border-color: #00d4ff;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.ticker-label {
+    color: #666;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ticker-value {
+    color: #fff;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.ticker-btc {
+    color: #ffa500;
+    text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+}
+
+.ticker-xmr {
+    color: #ff6b35;
+    text-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+}
+
+.ticker-pair {
+    color: #00d4ff;
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+}
+
+.ticker-loading, .ticker-error {
+    padding: 8px 16px;
+    color: #666;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    animation: ticker-pulse 2s ease-in-out infinite;
+}
+
+.ticker-error {
+    color: #ff6b35;
+}
+
+@keyframes ticker-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .ticker-display {
+        flex-direction: column;
+        gap: 8px;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 12px;
+        border-top: 1px solid #333;
+        display: none;
+    }
+
+    .ticker-container:hover .ticker-display {
+        display: flex;
+    }
+
+    .ticker-container::after {
+        content: "▼";
+        margin-left: 8px;
+        font-size: 10px;
+        color: #666;
+    }
+}

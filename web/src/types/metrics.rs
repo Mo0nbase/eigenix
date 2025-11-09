@@ -73,3 +73,11 @@ pub struct TradingConfig {
     pub check_interval_seconds: u64,
 }
 
+/// Kraken ticker prices response
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct KrakenTickers {
+    pub btc_usd: f64,
+    pub xmr_usd: f64,
+    pub btc_xmr: f64,
+}
+

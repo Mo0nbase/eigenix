@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use crate::components::Ticker;
 use crate::routes::Route;
 
 /// Navigation bar component with cyberpunk aesthetic
@@ -12,6 +13,7 @@ pub fn Navbar() -> Element {
                 id: "logo",
                 "[ λix ]"
             }
+            Ticker {}
         }
     }
 }

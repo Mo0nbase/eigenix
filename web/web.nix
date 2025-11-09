@@ -53,7 +53,13 @@
         version = "0.1.0";
         src = lib.cleanSource ./.;
 
-        cargoLock.lockFile = ./Cargo.lock;
+        cargoLock = {
+          lockFile = ./Cargo.lock;
+          outputHashes = {
+            "dioxus-primitives-0.0.1" = "sha256-5QVsZGGGcgqboxa4GmOg3DIjWlDfUuluiz6T8iI23L4=";
+            "dioxus-time-0.7.0" = "sha256-adzmKVgKMNtW95vQHRVnjuN2r2lCzonvEp5OOgvOiZg=";
+          };
+        };
 
         nativeBuildInputs = [
           pkgs.pkg-config
