@@ -28,6 +28,13 @@ pub struct RefreshResponse {
     height: u64,
 }
 
+/// Monero deposit address response
+#[derive(Serialize)]
+pub struct MoneroAddress {
+    /// Monero deposit address
+    address: String,
+}
+
 /// Get Monero wallet balance
 pub async fn get_balance(
     State(state): State<AppState>,
@@ -63,10 +70,25 @@ pub async fn refresh_wallet(
     Ok(Json(RefreshResponse { height }))
 }
 
+/// Get Monero deposit address
+pub async fn get_deposit_address(
+    State(state): State<AppState>,
+) -> ApiResult<Json<MoneroAddress>> {
+    let address = state
+        .wallets
+        .monero
+        .get_address()
+        .await
+        .map_err(ApiError::Wallet)?;
+
+    Ok(Json(MoneroAddress { address }))
+}
+
 /// Create the Monero wallet routes router
 pub fn monero_routes() -> Router<AppState> {
     Router::new()
         .route("/balance", get(get_balance))
         .route("/health", get(get_health))
+        .route("/address", get(get_deposit_address))
         .route("/refresh", post(refresh_wallet))
 }

@@ -82,8 +82,10 @@ test_endpoint "GET" "/wallets/balances" "Combined wallet balances"
 test_endpoint "GET" "/wallets/health" "Combined wallet health"
 test_endpoint "GET" "/wallets/bitcoin/balance" "Bitcoin balance"
 test_endpoint "GET" "/wallets/bitcoin/health" "Bitcoin health"
+test_endpoint "GET" "/wallets/bitcoin/address" "Bitcoin deposit address"
 test_endpoint "GET" "/wallets/monero/balance" "Monero balance"
 test_endpoint "GET" "/wallets/monero/health" "Monero health"
+test_endpoint "GET" "/wallets/monero/address" "Monero deposit address"
 echo
 
 # Note: POST endpoint test (won't actually execute)
