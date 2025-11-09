@@ -104,7 +104,8 @@ pub fn ElectrsMetrics(interval: Signal<i64>) -> Element {
 
     let electrs_up_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/electrs/up_status?minutes={}",
+            "http://{}:{}/metrics/electrs/up_status?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
@@ -119,7 +120,8 @@ pub fn ElectrsMetrics(interval: Signal<i64>) -> Element {
 
     let electrs_indexed_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/electrs/indexed_blocks?minutes={}",
+            "http://{}:{}/metrics/electrs/indexed_blocks?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );

@@ -107,7 +107,8 @@ pub fn MoneroMetrics(interval: Signal<i64>) -> Element {
 
     let xmr_height_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/monero/interval?minutes={}",
+            "http://{}:{}/metrics/monero/interval?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
@@ -125,7 +126,8 @@ pub fn MoneroMetrics(interval: Signal<i64>) -> Element {
 
     let xmr_target_height_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/monero/interval?minutes={}",
+            "http://{}:{}/metrics/monero/interval?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
@@ -143,7 +145,8 @@ pub fn MoneroMetrics(interval: Signal<i64>) -> Element {
 
     let xmr_difficulty_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/monero/interval?minutes={}",
+            "http://{}:{}/metrics/monero/interval?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
@@ -161,7 +164,8 @@ pub fn MoneroMetrics(interval: Signal<i64>) -> Element {
 
     let xmr_tx_count_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/monero/interval?minutes={}",
+            "http://{}:{}/metrics/monero/interval?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
@@ -179,7 +183,8 @@ pub fn MoneroMetrics(interval: Signal<i64>) -> Element {
 
     let xmr_balance_data = use_resource(move || async move {
         let url = format!(
-            "http://localhost:{}/metrics/monero/interval?minutes={}",
+            "http://{}:{}/metrics/monero/interval?minutes={}",
+            env!("API_HOST"),
             env!("API_PORT"),
             interval()
         );
