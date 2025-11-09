@@ -1,5 +1,5 @@
 use crate::api;
-use crate::types::metrics::{TradingState, TradingStatus};
+use crate::types::metrics::{TradingConfig, TradingState, TradingStatus};
 use dioxus::prelude::*;
 
 /// Skeleton version of status display for loading states
@@ -20,13 +20,12 @@ pub fn StatusDisplaySkeleton() -> Element {
                     "Loading..."
                 }
                 div {
-                    class: "skeleton-value"
+                    class: "skeleton-value skeleton-value-sm"
                 }
             }
 
             div {
-                class: "status-card status-card-secondary skeleton",
-
+                class: "status-card skeleton",
                 div {
                     class: "skeleton-label",
                     "Loading..."
@@ -38,8 +37,61 @@ pub fn StatusDisplaySkeleton() -> Element {
 
             div {
                 class: "status-card skeleton",
-                style: "--status-color: #666",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
 
+            div {
+                class: "status-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "status-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "status-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "status-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "status-card skeleton",
                 div {
                     class: "skeleton-label",
                     "Loading..."
@@ -52,9 +104,9 @@ pub fn StatusDisplaySkeleton() -> Element {
     }
 }
 
-/// Trading status display component showing engine state and activity
+/// Trading status display component showing engine state, activity, and configuration
 #[component]
-pub fn StatusDisplay(status: TradingStatus) -> Element {
+pub fn StatusDisplay(status: TradingStatus, config: TradingConfig) -> Element {
     let mut is_toggling = use_signal(|| false);
     let mut toggle_error = use_signal(|| Option::<String>::None);
 
@@ -208,33 +260,103 @@ pub fn StatusDisplay(status: TradingStatus) -> Element {
                     }
                 }
 
-                // Wallet balances
-                if let Some(btc) = status.current_btc_balance {
-                    div {
-                        class: "status-card status-card-secondary",
-
-                        h4 {
-                            class: "status-label",
-                            "WALLET BTC"
-                        }
-                        p {
-                            class: "status-value status-value-sm",
-                            "{btc:.8}"
-                        }
+                // Configuration parameters
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "XMR MIN THRESHOLD"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.monero_min_threshold:.4} XMR"
                     }
                 }
 
-                if let Some(xmr) = status.current_xmr_balance {
-                    div {
-                        class: "status-card status-card-secondary",
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "XMR TARGET BALANCE"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.monero_target_balance:.4} XMR"
+                    }
+                }
 
-                        h4 {
-                            class: "status-label",
-                            "WALLET XMR"
-                        }
-                        p {
-                            class: "status-value status-value-sm",
-                            "{xmr:.12}"
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "BTC RESERVE MIN"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.bitcoin_reserve_minimum:.8} BTC"
+                    }
+                }
+
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "MAX BTC PER REBALANCE"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.max_btc_per_rebalance:.8} BTC"
+                    }
+                }
+
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "CHECK INTERVAL"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.check_interval_secs}s"
+                    }
+                }
+
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "ORDER TIMEOUT"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.order_timeout_secs}s"
+                    }
+                }
+
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "SLIPPAGE TOLERANCE"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        "{config.slippage_tolerance_percent}%"
+                    }
+                }
+
+                div {
+                    class: "status-card",
+                    h5 {
+                        class: "status-label",
+                        "ORDER TYPE"
+                    }
+                    p {
+                        class: "status-value status-value-sm",
+                        if config.use_limit_orders {
+                            "LIMIT ORDERS"
+                        } else {
+                            "MARKET ORDERS"
                         }
                     }
                 }

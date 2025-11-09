@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::api;
-use crate::components::{Navbar, dashboard::*};
+use crate::components::{dashboard::*, Navbar};
 
 /// Unified dashboard combining Metrics, Wallets, and Trading
 #[component]
@@ -123,9 +123,9 @@ pub fn Dashboard() -> Element {
                         "// TRADING ENGINE //"
                     }
 
-                    // Trading Status
+                    // Unified Controls Section
                     div {
-                        style: "margin: 0 0 20px 0; padding: 25px; border: 1px solid #fff; background: linear-gradient(135deg, #111 0%, #0a0a0a 100%); position: relative;",
+                        style: "padding: 25px; border: 1px solid #fff; background: linear-gradient(135deg, #111 0%, #0a0a0a 100%); position: relative;",
 
                         div {
                             style: "position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #fff, transparent); opacity: 0.5;"
@@ -133,21 +133,21 @@ pub fn Dashboard() -> Element {
 
                         h3 {
                             style: "color: #fff; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 3px;",
-                            "// ENGINE STATUS //"
+                            "// CONTROLS //"
                         }
 
-                        match status() {
-                            Some(Ok(status_data)) => rsx! {
-                                StatusDisplay { status: status_data }
+                        match (status(), config()) {
+                            (Some(Ok(status_data)), Some(Ok(config_data))) => rsx! {
+                                StatusDisplay { status: status_data, config: config_data }
                             },
-                            Some(Err(e)) => rsx! {
+                            (Some(Err(e)), _) | (_, Some(Err(e))) => rsx! {
                                 div {
                                     class: "error",
                                     "Backend Connection Error"
                                 }
                                 p {
                                     style: "font-family: 'Courier New', monospace; font-size: 11px; color: #666; margin-top: 10px;",
-                                    "Unable to fetch trading engine status. Please check that the backend server is running."
+                                    "Unable to fetch trading engine data. Please check that the backend server is running."
                                 }
                                 details {
                                     summary {
@@ -160,51 +160,8 @@ pub fn Dashboard() -> Element {
                                     }
                                 }
                             },
-                            None => rsx! {
+                            _ => rsx! {
                                 StatusDisplaySkeleton {}
-                            }
-                        }
-                    }
-
-                    // Trading Configuration
-                    div {
-                        style: "padding: 25px; border: 1px solid #fff; background: linear-gradient(135deg, #111 0%, #0a0a0a 100%); position: relative;",
-
-                        div {
-                            style: "position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #fff, transparent); opacity: 0.5;"
-                        }
-
-                        h3 {
-                            style: "color: #fff; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 3px;",
-                            "// CONFIGURATION //"
-                        }
-
-                        match config() {
-                            Some(Ok(config_data)) => rsx! {
-                                ConfigDisplay { config: config_data }
-                            },
-                            Some(Err(e)) => rsx! {
-                                div {
-                                    class: "error",
-                                    "Backend Connection Error"
-                                }
-                                p {
-                                    style: "font-family: 'Courier New', monospace; font-size: 11px; color: #666; margin-top: 10px;",
-                                    "Unable to fetch trading configuration. Please check that the backend server is running."
-                                }
-                                details {
-                                    summary {
-                                        style: "color: #ff00ff; cursor: pointer; font-size: 11px; margin-top: 10px;",
-                                        "Technical Details"
-                                    }
-                                    p {
-                                        style: "font-family: 'Courier New', monospace; font-size: 10px; color: #999; margin-top: 5px;",
-                                        "{e}"
-                                    }
-                                }
-                            },
-                            None => rsx! {
-                                ConfigDisplaySkeleton {}
                             }
                         }
                     }
@@ -299,4 +256,3 @@ pub fn Dashboard() -> Element {
         }
     }
 }
-
