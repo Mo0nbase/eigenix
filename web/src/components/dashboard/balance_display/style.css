@@ -2,17 +2,22 @@
 
 .balance-display {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
 }
 
 .balance-card {
-    padding: 30px;
-    padding-bottom: 60px;
+    padding: 20px;
+    padding-right: 120px;
+    padding-bottom: 20px;
     background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
     border: 2px solid var(--btc-color);
     position: relative;
     overflow: visible;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .balance-glow {
@@ -26,35 +31,36 @@
 }
 
 .balance-title {
-    margin: 0 0 20px 0;
-    font-size: 12px;
+    margin: 0 0 10px 0;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
     color: var(--btc-color);
 }
 
 .balance-amount {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 6px;
     position: relative;
     z-index: 1;
 }
 
 .balance-value {
     margin: 0;
-    font-size: 36px;
+    font-size: 24px;
     font-weight: bold;
-    text-shadow: 0 0 15px rgba(255, 165, 0, 0.8);
+    text-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
     font-family: 'Courier New', monospace;
     color: var(--btc-color);
+    cursor: help;
 }
 
 .balance-currency {
-    font-size: 16px;
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     opacity: 0.7;
     color: var(--btc-color);
 }
@@ -99,10 +105,10 @@
 }
 
 .xmr-value {
-    font-size: 28px;
+    font-size: 18px;
     word-break: break-all;
     color: var(--btc-color);
-    text-shadow: 0 0 15px rgba(255, 107, 53, 0.8);
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
 }
 
 .xmr-currency {
@@ -112,19 +118,21 @@
 /* Deposit Buttons */
 .deposit-button {
     position: absolute;
-    bottom: 15px;
+    top: 50%;
     right: 15px;
-    padding: 10px 20px;
+    transform: translateY(-50%);
+    padding: 8px 16px;
     border: none;
     color: #000;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
     font-family: 'Courier New', monospace;
     z-index: 2;
+    white-space: nowrap;
 }
 
 .deposit-button-btc {
@@ -132,17 +140,66 @@
     box-shadow: 0 0 15px rgba(255, 165, 0, 0.3);
 }
 
-.deposit-button-btc:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(255, 165, 0, 0.6);
-}
-
 .deposit-button-xmr {
     background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%);
     box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
 }
 
-.deposit-button-xmr:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(255, 107, 53, 0.6);
+/* Skeleton Styles */
+.balance-card.skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-title {
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #666;
+    background: #333;
+    height: 12px;
+    width: 80px;
+    border-radius: 2px;
+}
+
+.skeleton-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+}
+
+.skeleton-value {
+    background: #333;
+    height: 24px;
+    width: 80px;
+    border-radius: 2px;
+}
+
+.skeleton-currency {
+    background: #333;
+    height: 12px;
+    width: 30px;
+    border-radius: 2px;
+}
+
+.skeleton-button {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: #333;
+    height: 28px;
+    width: 80px;
+    border-radius: 2px;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
 }

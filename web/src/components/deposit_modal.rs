@@ -14,35 +14,41 @@ pub fn DepositModal(
     address: String,
     color: String,
 ) -> Element {
-    // Generate QR code data URL
-    let address_clone = address.clone();
-    let qr_data_url = use_memo(move || {
-        if address_clone.is_empty() {
-            return String::new();
-        }
+    // Generate QR code synchronously when address changes
+    // This runs during render when address prop changes
+    let qr_data_url = if address.is_empty() {
+        String::new()
+    } else {
+        dioxus_logger::tracing::info!("Generating QR code for address: {}", address);
         
-        // Generate QR code
-        match QrCode::new(address_clone.as_str()) {
+        match QrCode::new(address.as_str()) {
             Ok(code) => {
                 let image = code.render::<Luma<u8>>()
                     .min_dimensions(256, 256)
                     .build();
-                
-                // Convert to PNG bytes
+
                 let mut png_bytes = Vec::new();
-                if let Ok(()) = image::DynamicImage::ImageLuma8(image)
+                match image::DynamicImage::ImageLuma8(image)
                     .write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
                 {
-                    // Encode as base64 data URL
-                    let base64_image = general_purpose::STANDARD.encode(&png_bytes);
-                    format!("data:image/png;base64,{}", base64_image)
-                } else {
-                    String::new()
+                    Ok(()) => {
+                        let base64_image = general_purpose::STANDARD.encode(&png_bytes);
+                        let data_url = format!("data:image/png;base64,{}", base64_image);
+                        dioxus_logger::tracing::info!("QR code generated successfully, length: {}", data_url.len());
+                        data_url
+                    }
+                    Err(e) => {
+                        dioxus_logger::tracing::error!("Failed to encode QR code as PNG: {}", e);
+                        String::new()
+                    }
                 }
             }
-            Err(_) => String::new(),
+            Err(e) => {
+                dioxus_logger::tracing::error!("Failed to generate QR code: {:?}", e);
+                String::new()
+            }
         }
-    });
+    };
 
     let open_signal = use_memo(move || if open() { Some(true) } else { None });
     
@@ -79,9 +85,9 @@ pub fn DepositModal(
                 // QR Code
                 div {
                     style: "display: flex; justify-content: center; margin-bottom: 30px; padding: 20px; background: #fff; border: 2px solid {color};",
-                    if !qr_data_url().is_empty() {
+                    if !qr_data_url.is_empty() {
                         img {
-                            src: "{qr_data_url()}",
+                            src: "{qr_data_url}",
                             style: "width: 256px; height: 256px; display: block;",
                             alt: "QR Code"
                         }

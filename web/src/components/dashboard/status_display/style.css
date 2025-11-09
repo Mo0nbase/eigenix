@@ -52,3 +52,46 @@
     font-size: 14px;
     text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
 }
+
+/* Skeleton Styles */
+.skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-label {
+    color: #b0b0b0;
+    margin: 0 0 15px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: #333;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.skeleton-value {
+    color: var(--status-color, #fff);
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px var(--status-color, transparent);
+    font-family: 'Courier New', monospace;
+    background: #333;
+    height: 28px;
+    border-radius: 2px;
+}
+
+.skeleton-value-sm {
+    font-size: 14px;
+    height: 14px;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}

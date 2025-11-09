@@ -1,6 +1,73 @@
 use dioxus::prelude::*;
 use crate::types::metrics::TradingConfig;
 
+/// Skeleton version of config display for loading states
+#[component]
+pub fn ConfigDisplaySkeleton() -> Element {
+    rsx! {
+        document::Link { rel: "stylesheet", href: asset!("./style.css") }
+
+        div {
+            class: "config-display",
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "config-card skeleton",
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+        }
+    }
+}
+
 /// Trading configuration display component showing trading parameters
 #[component]
 pub fn ConfigDisplay(config: TradingConfig) -> Element {

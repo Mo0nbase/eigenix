@@ -67,11 +67,7 @@ pub fn Dashboard() -> Element {
                                 }
                             },
                             None => rsx! {
-                                p {
-                                    class: "loading",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "// LOADING HEALTH STATUS..."
-                                }
+                                HealthStatusSkeleton {}
                             }
                         }
                     }
@@ -94,18 +90,27 @@ pub fn Dashboard() -> Element {
                                 BalanceDisplay { balances: balance_data }
                             },
                             Some(Err(e)) => rsx! {
-                                p {
+                                div {
                                     class: "error",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "ERROR: {e}"
+                                    "Backend Connection Error"
+                                }
+                                p {
+                                    style: "font-family: 'Courier New', monospace; font-size: 11px; color: #666; margin-top: 10px;",
+                                    "Unable to fetch wallet balances. Please check that the backend server is running on http://nixlab:3000"
+                                }
+                                details {
+                                    summary {
+                                        style: "color: #ff6b35; cursor: pointer; font-size: 11px; margin-top: 10px;",
+                                        "Technical Details"
+                                    }
+                                    p {
+                                        style: "font-family: 'Courier New', monospace; font-size: 10px; color: #999; margin-top: 5px;",
+                                        "{e}"
+                                    }
                                 }
                             },
                             None => rsx! {
-                                p {
-                                    class: "loading",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "// LOADING BALANCES..."
-                                }
+                                BalanceDisplaySkeleton {}
                             }
                         }
                     }
@@ -136,18 +141,27 @@ pub fn Dashboard() -> Element {
                                 StatusDisplay { status: status_data }
                             },
                             Some(Err(e)) => rsx! {
-                                p {
+                                div {
                                     class: "error",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "ERROR: {e}"
+                                    "Backend Connection Error"
+                                }
+                                p {
+                                    style: "font-family: 'Courier New', monospace; font-size: 11px; color: #666; margin-top: 10px;",
+                                    "Unable to fetch trading engine status. Please check that the backend server is running."
+                                }
+                                details {
+                                    summary {
+                                        style: "color: #00d4ff; cursor: pointer; font-size: 11px; margin-top: 10px;",
+                                        "Technical Details"
+                                    }
+                                    p {
+                                        style: "font-family: 'Courier New', monospace; font-size: 10px; color: #999; margin-top: 5px;",
+                                        "{e}"
+                                    }
                                 }
                             },
                             None => rsx! {
-                                p {
-                                    class: "loading",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "// LOADING STATUS..."
-                                }
+                                StatusDisplaySkeleton {}
                             }
                         }
                     }
@@ -170,18 +184,27 @@ pub fn Dashboard() -> Element {
                                 ConfigDisplay { config: config_data }
                             },
                             Some(Err(e)) => rsx! {
-                                p {
+                                div {
                                     class: "error",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "ERROR: {e}"
+                                    "Backend Connection Error"
+                                }
+                                p {
+                                    style: "font-family: 'Courier New', monospace; font-size: 11px; color: #666; margin-top: 10px;",
+                                    "Unable to fetch trading configuration. Please check that the backend server is running."
+                                }
+                                details {
+                                    summary {
+                                        style: "color: #ff00ff; cursor: pointer; font-size: 11px; margin-top: 10px;",
+                                        "Technical Details"
+                                    }
+                                    p {
+                                        style: "font-family: 'Courier New', monospace; font-size: 10px; color: #999; margin-top: 5px;",
+                                        "{e}"
+                                    }
                                 }
                             },
                             None => rsx! {
-                                p {
-                                    class: "loading",
-                                    style: "font-family: 'Courier New', monospace; font-size: 12px;",
-                                    "// LOADING CONFIGURATION..."
-                                }
+                                ConfigDisplaySkeleton {}
                             }
                         }
                     }

@@ -31,3 +31,44 @@
 .config-value-sm {
     font-size: 20px;
 }
+
+/* Skeleton Styles */
+.skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-label {
+    color: #b0b0b0;
+    margin: 0 0 10px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: #333;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.skeleton-value {
+    color: #fff;
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    background: #333;
+    height: 24px;
+    border-radius: 2px;
+}
+
+.skeleton-value-sm {
+    font-size: 20px;
+    height: 20px;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}

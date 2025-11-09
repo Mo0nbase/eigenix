@@ -1,6 +1,57 @@
 use dioxus::prelude::*;
 use crate::types::metrics::WalletHealth;
 
+/// Skeleton version of health status for loading states
+#[component]
+pub fn HealthStatusSkeleton() -> Element {
+    rsx! {
+        document::Link { rel: "stylesheet", href: asset!("./style.css") }
+
+        div {
+            class: "health-status",
+
+            div {
+                class: "health-card skeleton",
+                style: "--status-color: #666",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value"
+                }
+            }
+
+            div {
+                class: "health-card skeleton",
+                style: "--status-color: #666",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "health-card skeleton",
+                style: "--status-color: #666",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+        }
+    }
+}
+
 /// Health status display component showing overall wallet system health
 #[component]
 pub fn HealthStatus(health: WalletHealth) -> Element {

@@ -1,6 +1,56 @@
 use dioxus::prelude::*;
 use crate::types::metrics::TradingStatus;
 
+/// Skeleton version of status display for loading states
+#[component]
+pub fn StatusDisplaySkeleton() -> Element {
+    rsx! {
+        document::Link { rel: "stylesheet", href: asset!("./style.css") }
+
+        div {
+            class: "status-display",
+
+            div {
+                class: "status-card skeleton",
+                style: "--status-color: #666",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value"
+                }
+            }
+
+            div {
+                class: "status-card status-card-secondary skeleton",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+
+            div {
+                class: "status-card skeleton",
+                style: "--status-color: #666",
+
+                div {
+                    class: "skeleton-label",
+                    "Loading..."
+                }
+                div {
+                    class: "skeleton-value skeleton-value-sm"
+                }
+            }
+        }
+    }
+}
+
 /// Trading status display component showing engine state and activity
 #[component]
 pub fn StatusDisplay(status: TradingStatus) -> Element {
