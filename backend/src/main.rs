@@ -210,6 +210,220 @@ async fn container_history(
 }
 
 #[derive(Deserialize)]
+struct ContainerIntervalQuery {
+    name: String,
+    minutes: Option<i64>,
+}
+
+async fn container_interval(
+    State(state): State<AppState>,
+    Query(query): Query<ContainerIntervalQuery>,
+) -> Result<Json<Vec<db::StoredContainerMetrics>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_container_history(&query.name, from, to)
+        .await
+        .map_err(|e| format!("Failed to get container interval metrics: {}", e))?;
+
+    Ok(Json(history))
+}
+
+// Individual ASB metric endpoints
+async fn asb_balance_btc(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": m.balance_btc
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+async fn asb_pending_swaps(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": m.pending_swaps
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+async fn asb_completed_swaps(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": m.completed_swaps
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+async fn asb_failed_swaps(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": m.failed_swaps
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+async fn asb_up_status(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_asb_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get ASB history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": if m.up { 1u8 } else { 0u8 }
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+// Individual Electrs metric endpoints
+async fn electrs_up_status(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_electrs_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get Electrs history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": if m.up { 1u8 } else { 0u8 }
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+async fn electrs_indexed_blocks(
+    State(state): State<AppState>,
+    Query(query): Query<IntervalQuery>,
+) -> Result<Json<Vec<serde_json::Value>>, String> {
+    let minutes = query.minutes.unwrap_or(5);
+    let to = Utc::now();
+    let from = to - Duration::minutes(minutes);
+
+    let history = state
+        .db
+        .get_electrs_history(from, to)
+        .await
+        .map_err(|e| format!("Failed to get Electrs history: {}", e))?;
+
+    let values: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|m| {
+            serde_json::json!({
+                "timestamp": m.timestamp,
+                "value": m.indexed_blocks
+            })
+        })
+        .collect();
+
+    Ok(Json(values))
+}
+
+#[derive(Deserialize)]
 struct IntervalQuery {
     minutes: Option<i64>,
 }
@@ -426,11 +640,24 @@ async fn main() -> anyhow::Result<()> {
         .route("/metrics/asb", get(asb_metrics))
         .route("/metrics/asb/history", get(asb_history))
         .route("/metrics/asb/interval", get(asb_interval))
+        // Individual ASB metrics
+        .route("/metrics/asb/balance_btc", get(asb_balance_btc))
+        .route("/metrics/asb/pending_swaps", get(asb_pending_swaps))
+        .route("/metrics/asb/completed_swaps", get(asb_completed_swaps))
+        .route("/metrics/asb/failed_swaps", get(asb_failed_swaps))
+        .route("/metrics/asb/up_status", get(asb_up_status))
         .route("/metrics/electrs", get(electrs_metrics))
         .route("/metrics/electrs/history", get(electrs_history))
         .route("/metrics/electrs/interval", get(electrs_interval))
+        // Individual Electrs metrics
+        .route("/metrics/electrs/up_status", get(electrs_up_status))
+        .route(
+            "/metrics/electrs/indexed_blocks",
+            get(electrs_indexed_blocks),
+        )
         .route("/metrics/containers", get(container_metrics))
         .route("/metrics/containers/history", get(container_history))
+        .route("/metrics/containers/interval", get(container_interval))
         .with_state(state)
         .layer(
             CorsLayer::new()
