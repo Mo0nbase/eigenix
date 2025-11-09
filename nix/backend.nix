@@ -165,7 +165,16 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${cfg.package}/bin/eigenix-backend";
+        ExecStart = ''
+          ${cfg.package}/bin/eigenix-backend \
+            --host ${settings.backend.host} \
+            --port ${toString settings.ports.eigenixBackend} \
+            --bitcoin-rpc-url http://localhost:${toString settings.ports.bitcoinRpc} \
+            --monero-rpc-url http://localhost:${toString settings.ports.moneroRpc} \
+            --asb-rpc-url http://localhost:${toString settings.ports.asbRpc} \
+            --db-endpoint localhost:${toString settings.ports.surrealdb} \
+            --bitcoin-cookie-path ${settings.storage.baseDataDir}/bitcoind-data/.cookie
+        '';
         Restart = "on-failure";
         RestartSec = "10s";
 
