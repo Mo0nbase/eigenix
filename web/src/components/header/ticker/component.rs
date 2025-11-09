@@ -39,6 +39,11 @@ pub fn Ticker() -> Element {
 /// Display component for ticker data
 #[component]
 pub fn TickerDisplay(tickers: KrakenTickers) -> Element {
+    // Determine change classes based on positive/negative
+    let btc_change_class = if tickers.btc_usd_change_24h >= 0.0 { "ticker-change-positive" } else { "ticker-change-negative" };
+    let xmr_change_class = if tickers.xmr_usd_change_24h >= 0.0 { "ticker-change-positive" } else { "ticker-change-negative" };
+    let pair_change_class = if tickers.xmr_btc_change_24h >= 0.0 { "ticker-change-positive" } else { "ticker-change-negative" };
+
     rsx! {
         div {
             class: "ticker-display",
@@ -53,6 +58,10 @@ pub fn TickerDisplay(tickers: KrakenTickers) -> Element {
                     class: "ticker-value ticker-btc",
                     "${tickers.btc_usd:.2}"
                 }
+                span {
+                    class: "ticker-change {btc_change_class}",
+                    "{tickers.btc_usd_change_24h:+.2}%"
+                }
             }
 
             div {
@@ -65,6 +74,10 @@ pub fn TickerDisplay(tickers: KrakenTickers) -> Element {
                     class: "ticker-value ticker-xmr",
                     "${tickers.xmr_usd:.2}"
                 }
+                span {
+                    class: "ticker-change {xmr_change_class}",
+                    "{tickers.xmr_usd_change_24h:+.2}%"
+                }
             }
 
             div {
@@ -76,6 +89,10 @@ pub fn TickerDisplay(tickers: KrakenTickers) -> Element {
                 span {
                     class: "ticker-value ticker-pair",
                     "{tickers.xmr_btc:.8}"
+                }
+                span {
+                    class: "ticker-change {pair_change_class}",
+                    "{tickers.xmr_btc_change_24h:+.2}%"
                 }
             }
         }

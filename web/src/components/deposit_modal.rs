@@ -26,20 +26,20 @@ pub fn DepositModal(
                 let image = code.render::<Luma<u8>>()
                     .min_dimensions(256, 256)
                     .build();
-
+                
                 let mut png_bytes = Vec::new();
                 match image::DynamicImage::ImageLuma8(image)
                     .write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
                 {
                     Ok(()) => {
-                        let base64_image = general_purpose::STANDARD.encode(&png_bytes);
+                    let base64_image = general_purpose::STANDARD.encode(&png_bytes);
                         let data_url = format!("data:image/png;base64,{}", base64_image);
                         dioxus_logger::tracing::info!("QR code generated successfully, length: {}", data_url.len());
                         data_url
                     }
                     Err(e) => {
                         dioxus_logger::tracing::error!("Failed to encode QR code as PNG: {}", e);
-                        String::new()
+                    String::new()
                     }
                 }
             }

@@ -10,6 +10,7 @@
 /// For testing, create API keys with limited permissions (e.g., query only, no trading/withdrawals).
 ///
 /// See tests/KRAKEN_TESTING.md for detailed documentation.
+use eigenix_backend::routes::kraken::KrakenTickerResponse;
 use eigenix_backend::services::kraken::KrakenClient;
 
 mod common;
@@ -159,6 +160,158 @@ async fn test_kraken_all_tickers() {
         println!("✅ XMR/BTC: {:.8}", price);
     } else {
         eprintln!("❌ XMR/BTC failed");
+    }
+}
+
+#[tokio::test]
+#[ignore] // Requires backend service to be running
+async fn test_kraken_tickers_endpoint() {
+    // Test the actual /kraken/tickers HTTP endpoint
+    // This requires the backend service to be running on localhost:3000
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:3000/kraken/tickers")
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) => {
+            assert_eq!(resp.status(), 200, "Endpoint should return 200 OK");
+
+            let body = resp.text().await.expect("Should get response body");
+            println!("Raw response: {}", body);
+
+            // Parse the JSON response
+            let tickers: KrakenTickerResponse = serde_json::from_str(&body)
+                .expect("Response should be valid JSON");
+
+            // Verify all required fields are present
+            assert!(tickers.btc_usd > 0.0, "BTC/USD price should be positive");
+            assert!(tickers.xmr_usd > 0.0, "XMR/USD price should be positive");
+            assert!(tickers.xmr_btc > 0.0, "XMR/BTC price should be positive");
+
+            // Verify reasonable price ranges
+            assert!(tickers.btc_usd > 1000.0 && tickers.btc_usd < 500000.0,
+                   "BTC/USD price should be reasonable: ${}", tickers.btc_usd);
+            assert!(tickers.xmr_usd > 10.0 && tickers.xmr_usd < 10000.0,
+                   "XMR/USD price should be reasonable: ${}", tickers.xmr_usd);
+            assert!(tickers.xmr_btc > 0.0001 && tickers.xmr_btc < 1.0,
+                   "XMR/BTC price should be reasonable: {}", tickers.xmr_btc);
+
+            // Verify 24h change percentages are reasonable (should be between -50% and +50%)
+            assert!(tickers.btc_usd_change_24h > -50.0 && tickers.btc_usd_change_24h < 50.0,
+                   "BTC/USD 24h change should be reasonable: {:.2}%", tickers.btc_usd_change_24h);
+            assert!(tickers.xmr_usd_change_24h > -50.0 && tickers.xmr_usd_change_24h < 50.0,
+                   "XMR/USD 24h change should be reasonable: {:.2}%", tickers.xmr_usd_change_24h);
+            assert!(tickers.xmr_btc_change_24h > -50.0 && tickers.xmr_btc_change_24h < 50.0,
+                   "XMR/BTC 24h change should be reasonable: {:.2}%", tickers.xmr_btc_change_24h);
+
+            println!("✅ Kraken tickers endpoint test passed!");
+            println!("   BTC/USD: ${:.2} ({:+.2}%)", tickers.btc_usd, tickers.btc_usd_change_24h);
+            println!("   XMR/USD: ${:.2} ({:+.2}%)", tickers.xmr_usd, tickers.xmr_usd_change_24h);
+            println!("   XMR/BTC: {:.8} ({:+.2}%)", tickers.xmr_btc, tickers.xmr_btc_change_24h);
+        }
+        Err(e) => {
+            eprintln!("⚠️  Kraken tickers endpoint test failed (backend not running?): {}", e);
+            eprintln!("💡 To run this test, start the backend service first:");
+            eprintln!("   cd projects/eigenix/backend && cargo run");
+        }
+    }
+}
+
+#[tokio::test]
+#[ignore] // Requires backend service to be running
+async fn test_kraken_tickers_endpoint_structure() {
+    // Test that the endpoint returns the correct JSON structure
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:3000/kraken/tickers")
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) => {
+            assert_eq!(resp.status(), 200);
+
+            let body = resp.text().await.expect("Should get response body");
+
+            // Parse as raw JSON value first to check structure
+            let json_value: serde_json::Value = serde_json::from_str(&body)
+                .expect("Response should be valid JSON");
+
+            // Verify all expected fields are present
+            assert!(json_value.get("btc_usd").is_some(), "btc_usd field should be present");
+            assert!(json_value.get("btc_usd_change_24h").is_some(), "btc_usd_change_24h field should be present");
+            assert!(json_value.get("xmr_usd").is_some(), "xmr_usd field should be present");
+            assert!(json_value.get("xmr_usd_change_24h").is_some(), "xmr_usd_change_24h field should be present");
+            assert!(json_value.get("xmr_btc").is_some(), "xmr_btc field should be present");
+            assert!(json_value.get("xmr_btc_change_24h").is_some(), "xmr_btc_change_24h field should be present");
+
+            // Verify that fields are numbers
+            assert!(json_value["btc_usd"].is_number(), "btc_usd should be a number");
+            assert!(json_value["btc_usd_change_24h"].is_number(), "btc_usd_change_24h should be a number");
+            assert!(json_value["xmr_usd"].is_number(), "xmr_usd should be a number");
+            assert!(json_value["xmr_usd_change_24h"].is_number(), "xmr_usd_change_24h should be a number");
+            assert!(json_value["xmr_btc"].is_number(), "xmr_btc should be a number");
+            assert!(json_value["xmr_btc_change_24h"].is_number(), "xmr_btc_change_24h should be a number");
+
+            println!("✅ Kraken tickers endpoint structure test passed!");
+            println!("   Response has correct JSON structure with all required fields");
+        }
+        Err(e) => {
+            eprintln!("⚠️  Kraken tickers endpoint structure test failed (backend not running?): {}", e);
+        }
+    }
+}
+
+#[tokio::test]
+#[ignore] // Requires backend service to be running
+async fn test_kraken_tickers_endpoint_consistency() {
+    // Test that the endpoint returns consistent data (prices don't change drastically between calls)
+    let client = reqwest::Client::new();
+
+    // Make two requests with a small delay
+    let response1 = client
+        .get("http://localhost:3000/kraken/tickers")
+        .send()
+        .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    let response2 = client
+        .get("http://localhost:3000/kraken/tickers")
+        .send()
+        .await;
+
+    match (response1, response2) {
+        (Ok(resp1), Ok(resp2)) => {
+            assert_eq!(resp1.status(), 200);
+            assert_eq!(resp2.status(), 200);
+
+            let body1 = resp1.text().await.expect("Should get first response body");
+            let body2 = resp2.text().await.expect("Should get second response body");
+
+            let tickers1: KrakenTickerResponse = serde_json::from_str(&body1)
+                .expect("First response should be valid JSON");
+            let tickers2: KrakenTickerResponse = serde_json::from_str(&body2)
+                .expect("Second response should be valid JSON");
+
+            // Prices shouldn't change drastically (more than 10%) within 500ms
+            let btc_change = ((tickers2.btc_usd - tickers1.btc_usd) / tickers1.btc_usd).abs();
+            let xmr_change = ((tickers2.xmr_usd - tickers1.xmr_usd) / tickers1.xmr_usd).abs();
+            let pair_change = ((tickers2.xmr_btc - tickers1.xmr_btc) / tickers1.xmr_btc).abs();
+
+            assert!(btc_change < 0.1, "BTC/USD price shouldn't change more than 10% in 500ms: {:.4}%", btc_change * 100.0);
+            assert!(xmr_change < 0.1, "XMR/USD price shouldn't change more than 10% in 500ms: {:.4}%", xmr_change * 100.0);
+            assert!(pair_change < 0.1, "XMR/BTC price shouldn't change more than 10% in 500ms: {:.4}%", pair_change * 100.0);
+
+            println!("✅ Kraken tickers endpoint consistency test passed!");
+            println!("   Prices remained stable between requests");
+        }
+        _ => {
+            eprintln!("⚠️  Kraken tickers endpoint consistency test failed (backend not running?)");
+        }
     }
 }
 

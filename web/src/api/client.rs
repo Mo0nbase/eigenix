@@ -10,7 +10,7 @@ impl ApiClient {
     /// Make a GET request to the API
     pub async fn get<T: DeserializeOwned>(endpoint: &str) -> Result<T, String> {
         let url = format!("{}{}", api_base_url(), endpoint);
-
+        
         let response = Request::get(&url)
             .send()
             .await
@@ -41,7 +41,7 @@ impl ApiClient {
         body: &B,
     ) -> Result<T, String> {
         let url = format!("{}{}", api_base_url(), endpoint);
-
+        
         let response = Request::post(&url)
             .json(body)
             .map_err(|e| format!("Failed to serialize body: {}", e))?
@@ -74,7 +74,7 @@ impl ApiClient {
         body: &B,
     ) -> Result<T, String> {
         let url = format!("{}{}", api_base_url(), endpoint);
-
+        
         let response = Request::put(&url)
             .json(body)
             .map_err(|e| format!("Failed to serialize body: {}", e))?

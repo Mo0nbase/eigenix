@@ -49,6 +49,8 @@ pub struct TickerInfo {
     pub volume: Vec<String>, // [today, last 24 hours]
     #[serde(rename = "p")]
     pub vwap: Vec<String>, // [today, last 24 hours]
+    #[serde(rename = "o")]
+    pub open: String, // Today's opening price
 }
 
 /// Order information

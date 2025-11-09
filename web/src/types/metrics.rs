@@ -99,6 +99,9 @@ pub struct TradingConfig {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct KrakenTickers {
     pub btc_usd: f64,
+    pub btc_usd_change_24h: f64,
     pub xmr_usd: f64,
+    pub xmr_usd_change_24h: f64,
     pub xmr_btc: f64,
+    pub xmr_btc_change_24h: f64,
 }
