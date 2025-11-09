@@ -132,8 +132,9 @@ impl AsbClient {
     /// # Returns
     /// `Ok(())` if connection is successful
     pub async fn check_connection(&self) -> Result<()> {
-        // check_connection typically returns a simple success response
-        let _: serde_json::Value = self.call("check_connection", serde_json::json!({})).await?;
+        // Try to call a simple method to verify connection
+        // Use get_swaps as a health check since it should always return something
+        let _: serde_json::Value = self.call("get_swaps", serde_json::json!({})).await?;
         Ok(())
     }
 
@@ -238,8 +239,13 @@ impl AsbClient {
     pub async fn get_multiaddresses(&self) -> Result<Vec<String>> {
         let result: serde_json::Value = self.call("multiaddresses", serde_json::json!({})).await?;
 
-        // The result might be an array or wrapped in an object
+        // The result might be an array or wrapped in an object with key "multiaddresses"
         if let Some(addresses) = result.as_array() {
+            Ok(addresses
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect())
+        } else if let Some(addresses) = result.get("multiaddresses").and_then(|v| v.as_array()) {
             Ok(addresses
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
@@ -263,8 +269,10 @@ impl AsbClient {
             .call("active_connections", serde_json::json!({}))
             .await?;
 
-        // The result might be just a number or wrapped in an object
+        // The result might be just a number or wrapped in an object with key "connections" or "count"
         if let Some(count) = result.as_u64() {
+            Ok(count as u32)
+        } else if let Some(count) = result.get("connections").and_then(|v| v.as_u64()) {
             Ok(count as u32)
         } else if let Some(count) = result.get("count").and_then(|v| v.as_u64()) {
             Ok(count as u32)

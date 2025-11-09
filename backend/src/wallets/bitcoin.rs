@@ -4,9 +4,13 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 
 /// Bitcoin wallet client for sending/receiving BTC
+///
+/// This wallet connects to a Bitcoin Core node and manages a descriptor-based wallet.
+/// It requires a descriptor (containing private keys) to be provided during initialization.
 pub struct BitcoinWallet {
     url: String,
     auth: String,
+    wallet_name: String,
 }
 
 #[derive(Deserialize)]
@@ -18,6 +22,7 @@ struct RpcResponse<T> {
 #[derive(Deserialize)]
 struct RpcError {
     message: String,
+    code: Option<i32>,
 }
 
 /// Bitcoin wallet balance information
@@ -47,11 +52,79 @@ struct ValidateAddressResult {
 }
 
 impl BitcoinWallet {
-    /// Create a new Bitcoin wallet client using cookie authentication
-    /// First tries BITCOIN_RPC_COOKIE env var, then tries sudo, then direct read
-    pub fn new(url: String, cookie_path: &str) -> Result<Self> {
-        let cookie = if let Ok(cookie_env) = std::env::var("BITCOIN_RPC_COOKIE") {
-            cookie_env
+    /// Create and initialize a Bitcoin wallet from a descriptor
+    ///
+    /// This will:
+    /// 1. Connect to Bitcoin Core RPC
+    /// 2. Create a new descriptor wallet (or load if exists)
+    /// 3. Import the provided descriptor
+    ///
+    /// # Arguments
+    /// * `url` - Bitcoin Core RPC URL (e.g., "http://127.0.0.1:8332")
+    /// * `cookie_path` - Path to Bitcoin Core .cookie file for authentication
+    /// * `descriptor` - Wallet descriptor string (from ASB) containing private keys
+    /// * `wallet_name` - Name for the wallet in Bitcoin Core (e.g., "eigenix")
+    /// * `rescan` - Whether to rescan blockchain for existing transactions
+    pub async fn new_from_descriptor(
+        url: String,
+        cookie_path: &str,
+        descriptor: &str,
+        wallet_name: &str,
+        rescan: bool,
+    ) -> Result<Self> {
+        let cookie = Self::read_cookie(cookie_path)?;
+        let auth = format!("Basic {}", general_purpose::STANDARD.encode(cookie.trim()));
+
+        let wallet = Self {
+            url,
+            auth,
+            wallet_name: wallet_name.to_string(),
+        };
+
+        // Initialize the wallet in Bitcoin Core
+        wallet.initialize_wallet(descriptor, rescan).await?;
+
+        Ok(wallet)
+    }
+
+    /// Connect to an existing Bitcoin wallet
+    ///
+    /// Use this when the wallet has already been initialized and you just want to reconnect.
+    ///
+    /// # Arguments
+    /// * `url` - Bitcoin Core RPC URL
+    /// * `cookie_path` - Path to .cookie file
+    /// * `wallet_name` - Name of existing wallet
+    pub async fn connect_existing(
+        url: String,
+        cookie_path: &str,
+        wallet_name: &str,
+    ) -> Result<Self> {
+        let cookie = Self::read_cookie(cookie_path)?;
+        let auth = format!("Basic {}", general_purpose::STANDARD.encode(cookie.trim()));
+
+        let wallet = Self {
+            url,
+            auth,
+            wallet_name: wallet_name.to_string(),
+        };
+
+        // Try to load the wallet if it exists
+        let _ = wallet.load_wallet().await;
+
+        // Verify wallet is accessible
+        wallet
+            .get_balance()
+            .await
+            .context("Failed to connect to existing wallet")?;
+
+        Ok(wallet)
+    }
+
+    /// Read Bitcoin Core cookie file for authentication
+    fn read_cookie(cookie_path: &str) -> Result<String> {
+        if let Ok(cookie_env) = std::env::var("BITCOIN_RPC_COOKIE") {
+            Ok(cookie_env)
         } else {
             // Try reading with sudo if direct read fails
             std::process::Command::new("sudo")
@@ -67,16 +140,109 @@ impl BitcoinWallet {
                     }
                 })
                 .or_else(|| fs::read_to_string(cookie_path).ok())
-                .context("Failed to read Bitcoin RPC cookie file")?
-        };
-
-        // Cookie format is "username:password"
-        let auth = format!("Basic {}", general_purpose::STANDARD.encode(cookie.trim()));
-
-        Ok(Self { url, auth })
+                .context("Failed to read Bitcoin RPC cookie file")
+        }
     }
 
-    /// Call a Bitcoin RPC method with parameters
+    /// Initialize wallet in Bitcoin Core with descriptor
+    async fn initialize_wallet(&self, descriptor: &str, rescan: bool) -> Result<()> {
+        // Try to create wallet (ignore error if already exists)
+        match self.create_wallet().await {
+            Ok(_) => tracing::info!("Created new Bitcoin wallet: {}", self.wallet_name),
+            Err(e) => {
+                // Check if error is "wallet already exists"
+                if e.to_string().contains("already exists") {
+                    tracing::info!("Bitcoin wallet already exists: {}", self.wallet_name);
+                    // Load the existing wallet
+                    self.load_wallet().await?;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+
+        // Import descriptor
+        self.import_descriptors(descriptor, rescan).await?;
+
+        Ok(())
+    }
+
+    /// Create a descriptor wallet in Bitcoin Core
+    async fn create_wallet(&self) -> Result<()> {
+        #[derive(Deserialize)]
+        struct CreateWalletResult {
+            name: String,
+        }
+
+        let params = serde_json::json!([
+            self.wallet_name,
+            false, // disable_private_keys (false - we need private keys)
+            false, // blank (false - we'll import descriptors)
+            "",    // passphrase (empty for now)
+            false, // avoid_reuse
+            true,  // descriptors (use descriptor wallet - required for modern Bitcoin Core)
+            true,  // load_on_startup
+        ]);
+
+        let _result: CreateWalletResult = self.call("createwallet", params).await?;
+        Ok(())
+    }
+
+    /// Load wallet in Bitcoin Core
+    async fn load_wallet(&self) -> Result<()> {
+        #[derive(Deserialize)]
+        struct LoadWalletResult {
+            name: String,
+        }
+
+        let params = serde_json::json!([self.wallet_name]);
+        let _result: LoadWalletResult = self.call("loadwallet", params).await?;
+        Ok(())
+    }
+
+    /// Import descriptors into Bitcoin Core wallet
+    async fn import_descriptors(&self, descriptor: &str, rescan: bool) -> Result<()> {
+        #[derive(Deserialize)]
+        struct ImportResult {
+            success: bool,
+            #[serde(default)]
+            warnings: Vec<String>,
+        }
+
+        let params = if rescan {
+            serde_json::json!([[
+                {
+                    "desc": descriptor,
+                    "timestamp": 0,
+                    "active": true,
+                }
+            ]])
+        } else {
+            serde_json::json!([[
+                {
+                    "desc": descriptor,
+                    "timestamp": "now",
+                    "active": true,
+                }
+            ]])
+        };
+
+        let results: Vec<ImportResult> = self.call_wallet("importdescriptors", params).await?;
+
+        for result in &results {
+            if !result.success {
+                anyhow::bail!("Failed to import descriptor");
+            }
+            for warning in &result.warnings {
+                tracing::warn!("Descriptor import warning: {}", warning);
+            }
+        }
+
+        tracing::info!("Successfully imported descriptor into Bitcoin wallet");
+        Ok(())
+    }
+
+    /// Call a Bitcoin RPC method (no wallet context)
     async fn call<T: for<'de> Deserialize<'de>>(
         &self,
         method: &str,
@@ -114,6 +280,47 @@ impl BitcoinWallet {
             .context("RPC response missing result field")
     }
 
+    /// Call a Bitcoin wallet RPC method (with wallet context)
+    async fn call_wallet<T: for<'de> Deserialize<'de>>(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<T> {
+        let client = reqwest::Client::new();
+
+        // Use wallet-specific endpoint
+        let wallet_url = format!("{}/wallet/{}", self.url, self.wallet_name);
+
+        let body = serde_json::json!({
+            "jsonrpc": "1.0",
+            "id": "eigenix",
+            "method": method,
+            "params": params
+        });
+
+        let response = client
+            .post(&wallet_url)
+            .header("Authorization", &self.auth)
+            .header("Content-Type", "text/plain")
+            .json(&body)
+            .send()
+            .await
+            .context("Failed to send wallet RPC request")?;
+
+        let rpc_response: RpcResponse<T> = response
+            .json()
+            .await
+            .context("Failed to parse wallet RPC response")?;
+
+        if let Some(error) = rpc_response.error {
+            anyhow::bail!("Bitcoin wallet RPC error: {}", error.message);
+        }
+
+        rpc_response
+            .result
+            .context("Wallet RPC response missing result field")
+    }
+
     /// Get wallet balance
     pub async fn get_balance(&self) -> Result<WalletBalance> {
         #[derive(Deserialize)]
@@ -128,7 +335,9 @@ impl BitcoinWallet {
             immature: f64,
         }
 
-        let result: BalancesResult = self.call("getbalances", serde_json::json!([])).await?;
+        let result: BalancesResult = self
+            .call_wallet("getbalances", serde_json::json!([]))
+            .await?;
 
         Ok(WalletBalance {
             balance: result.mine.trusted,
@@ -148,14 +357,14 @@ impl BitcoinWallet {
             serde_json::json!([])
         };
 
-        let address: String = self.call("getnewaddress", params).await?;
+        let address: String = self.call_wallet("getnewaddress", params).await?;
         Ok(address)
     }
 
     /// Validate a Bitcoin address
     pub async fn validate_address(&self, address: &str) -> Result<bool> {
         let result: ValidateAddressResult = self
-            .call("validateaddress", serde_json::json!([address]))
+            .call_wallet("validateaddress", serde_json::json!([address]))
             .await?;
         Ok(result.isvalid)
     }
@@ -188,7 +397,7 @@ impl BitcoinWallet {
             subtract_fee
         ]);
 
-        let txid: String = self.call("sendtoaddress", params).await?;
+        let txid: String = self.call_wallet("sendtoaddress", params).await?;
         Ok(txid)
     }
 
@@ -209,7 +418,7 @@ impl BitcoinWallet {
         }
 
         let result: TxResult = self
-            .call("gettransaction", serde_json::json!([txid]))
+            .call_wallet("gettransaction", serde_json::json!([txid]))
             .await?;
 
         Ok(Transaction {
@@ -240,7 +449,7 @@ impl BitcoinWallet {
         }
 
         let result: Vec<TxListItem> = self
-            .call("listtransactions", serde_json::json!(["*", count]))
+            .call_wallet("listtransactions", serde_json::json!(["*", count]))
             .await?;
 
         Ok(result
@@ -266,7 +475,6 @@ impl BitcoinWallet {
     /// # Returns
     /// Estimated fee in BTC
     pub async fn estimate_fee(&self, address: &str, amount: f64) -> Result<f64> {
-        // Create a test transaction without broadcasting
         #[derive(Deserialize)]
         struct FundRawResult {
             fee: f64,
@@ -274,7 +482,7 @@ impl BitcoinWallet {
 
         // Create raw transaction
         let raw_tx: String = self
-            .call(
+            .call_wallet(
                 "createrawtransaction",
                 serde_json::json!([[], {address: amount}]),
             )
@@ -282,10 +490,15 @@ impl BitcoinWallet {
 
         // Fund it to get fee estimate
         let funded: FundRawResult = self
-            .call("fundrawtransaction", serde_json::json!([raw_tx]))
+            .call_wallet("fundrawtransaction", serde_json::json!([raw_tx]))
             .await?;
 
         Ok(funded.fee)
+    }
+
+    /// Check if wallet is loaded and operational
+    pub async fn is_ready(&self) -> bool {
+        self.get_balance().await.is_ok()
     }
 }
 
@@ -295,25 +508,34 @@ mod tests {
 
     #[tokio::test]
     #[ignore] // Only run with valid Bitcoin node
-    async fn test_get_balance() {
-        let wallet = BitcoinWallet::new(
+    async fn test_connect_existing() {
+        let wallet = BitcoinWallet::connect_existing(
             "http://127.0.0.1:8332".to_string(),
             "/mnt/vault/bitcoind-data/.cookie",
+            "eigenix",
         )
+        .await
         .unwrap();
+
         let balance = wallet.get_balance().await;
         assert!(balance.is_ok());
     }
 
     #[tokio::test]
-    #[ignore] // Only run with valid Bitcoin node
-    async fn test_get_new_address() {
-        let wallet = BitcoinWallet::new(
+    #[ignore] // Only run with valid Bitcoin node and descriptor
+    async fn test_new_from_descriptor() {
+        let descriptor = "wpkh([fingerprint/84h/0h/0h]xpub...)"; // Replace with actual descriptor
+
+        let wallet = BitcoinWallet::new_from_descriptor(
             "http://127.0.0.1:8332".to_string(),
             "/mnt/vault/bitcoind-data/.cookie",
+            descriptor,
+            "eigenix_test",
+            false,
         )
+        .await
         .unwrap();
-        let address = wallet.get_new_address(Some("test")).await;
-        assert!(address.is_ok());
+
+        assert!(wallet.is_ready().await);
     }
 }

@@ -17,13 +17,16 @@ mod metrics;
 mod services;
 mod wallets;
 
+use anyhow::Context;
 use config::{Cli, Config};
 use db::MetricsDatabase;
+use wallets::WalletManager;
 
 #[derive(Clone)]
 struct AppState {
     config: Arc<Config>,
     db: MetricsDatabase,
+    wallets: Arc<WalletManager>,
 }
 
 #[derive(Serialize)]
@@ -304,6 +307,24 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     tracing::info!("Connected to SurrealDB");
 
+    // Initialize wallets from ASB
+    tracing::info!("Initializing wallets...");
+    let wallet_config = config.to_wallet_config();
+    let wallets = WalletManager::initialize_or_connect(wallet_config)
+        .await
+        .context("Failed to initialize wallets")?;
+    let wallets = Arc::new(wallets);
+
+    // Log wallet balances
+    match wallets.get_balances().await {
+        Ok((btc, xmr)) => {
+            tracing::info!("Wallet balances - BTC: {:.8}, XMR: {:.12}", btc, xmr);
+        }
+        Err(e) => {
+            tracing::warn!("Failed to get initial wallet balances: {}", e);
+        }
+    }
+
     // Spawn background metrics collection task
     let metrics_config = config.clone();
     let metrics_db = db.clone();
@@ -316,6 +337,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         config: config.clone(),
         db,
+        wallets,
     };
 
     // Build our application with routes

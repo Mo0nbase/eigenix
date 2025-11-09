@@ -2,8 +2,12 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 /// Monero wallet client for sending/receiving XMR
+///
+/// This wallet connects to monero-wallet-rpc and manages a wallet created from a seed phrase.
+/// It requires a seed phrase and restore height to be provided during initialization.
 pub struct MoneroWallet {
     url: String,
+    wallet_name: String,
 }
 
 #[derive(Deserialize)]
@@ -49,12 +53,139 @@ pub struct Subaddress {
 const ATOMIC_UNITS_PER_XMR: u64 = 1_000_000_000_000;
 
 impl MoneroWallet {
-    /// Create a new Monero wallet RPC client
+    /// Create and initialize a Monero wallet from seed phrase
+    ///
+    /// This will:
+    /// 1. Connect to monero-wallet-rpc
+    /// 2. Restore wallet from seed phrase
+    /// 3. Open the wallet for use
     ///
     /// # Arguments
-    /// * `url` - URL of the monero-wallet-rpc (e.g., "http://127.0.0.1:18082/json_rpc")
-    pub fn new(url: String) -> Self {
-        Self { url }
+    /// * `url` - monero-wallet-rpc URL (e.g., "http://127.0.0.1:18082/json_rpc")
+    /// * `seed` - Monero seed phrase (25 words from ASB)
+    /// * `restore_height` - Block height to start scanning from (from ASB)
+    /// * `wallet_name` - Name for the wallet file (e.g., "eigenix")
+    /// * `password` - Optional password for the wallet (empty string if none)
+    pub async fn new_from_seed(
+        url: String,
+        seed: &str,
+        restore_height: u64,
+        wallet_name: &str,
+        password: &str,
+    ) -> Result<Self> {
+        let wallet = Self {
+            url,
+            wallet_name: wallet_name.to_string(),
+        };
+
+        // Initialize the wallet from seed
+        wallet
+            .initialize_wallet(seed, restore_height, password)
+            .await?;
+
+        Ok(wallet)
+    }
+
+    /// Connect to an existing Monero wallet
+    ///
+    /// Use this when the wallet has already been created and you just want to open it.
+    ///
+    /// # Arguments
+    /// * `url` - monero-wallet-rpc URL
+    /// * `wallet_name` - Name of existing wallet
+    /// * `password` - Wallet password (empty string if none)
+    pub async fn connect_existing(url: String, wallet_name: &str, password: &str) -> Result<Self> {
+        let wallet = Self {
+            url,
+            wallet_name: wallet_name.to_string(),
+        };
+
+        // Try to open the wallet
+        wallet.open_wallet(password).await?;
+
+        // Verify wallet is accessible
+        wallet
+            .get_balance()
+            .await
+            .context("Failed to connect to existing wallet")?;
+
+        Ok(wallet)
+    }
+
+    /// Initialize wallet from seed phrase
+    async fn initialize_wallet(
+        &self,
+        seed: &str,
+        restore_height: u64,
+        password: &str,
+    ) -> Result<()> {
+        // Try to restore wallet from seed
+        match self
+            .restore_wallet_from_seed(seed, restore_height, password)
+            .await
+        {
+            Ok(_) => {
+                tracing::info!("Restored Monero wallet from seed: {}", self.wallet_name);
+            }
+            Err(e) => {
+                // Check if wallet already exists
+                if e.to_string().contains("already exists")
+                    || e.to_string().contains("Cannot create")
+                {
+                    tracing::info!("Monero wallet already exists: {}", self.wallet_name);
+                    // Try to open it
+                    self.open_wallet(password).await?;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+
+        // Refresh wallet to sync with blockchain
+        self.refresh().await?;
+
+        Ok(())
+    }
+
+    /// Restore wallet from seed phrase
+    async fn restore_wallet_from_seed(
+        &self,
+        seed: &str,
+        restore_height: u64,
+        password: &str,
+    ) -> Result<()> {
+        let params = serde_json::json!({
+            "filename": self.wallet_name,
+            "password": password,
+            "seed": seed,
+            "restore_height": restore_height,
+            "language": "English",
+            "autosave_current": true,
+        });
+
+        let _: serde_json::Value = self.call("restore_deterministic_wallet", params).await?;
+        Ok(())
+    }
+
+    /// Open an existing wallet
+    async fn open_wallet(&self, password: &str) -> Result<()> {
+        // Close any currently opened wallet first
+        let _ = self.close_wallet().await;
+
+        let params = serde_json::json!({
+            "filename": self.wallet_name,
+            "password": password,
+        });
+
+        let _: serde_json::Value = self.call("open_wallet", params).await?;
+        tracing::info!("Opened Monero wallet: {}", self.wallet_name);
+        Ok(())
+    }
+
+    /// Close the currently opened wallet
+    async fn close_wallet(&self) -> Result<()> {
+        let _: serde_json::Value = self.call("close_wallet", serde_json::json!({})).await?;
+        Ok(())
     }
 
     /// Call a Monero wallet RPC method
@@ -345,14 +476,40 @@ impl MoneroWallet {
     }
 
     /// Refresh the wallet to check for new transactions
-    pub async fn refresh(&self) -> Result<()> {
+    ///
+    /// This syncs the wallet with the Monero blockchain
+    pub async fn refresh(&self) -> Result<u64> {
         #[derive(Deserialize)]
         struct RefreshResult {
             blocks_fetched: u64,
         }
 
-        let _result: RefreshResult = self.call("refresh", serde_json::json!({})).await?;
-        Ok(())
+        let result: RefreshResult = self.call("refresh", serde_json::json!({})).await?;
+
+        if result.blocks_fetched > 0 {
+            tracing::info!(
+                "Refreshed Monero wallet, fetched {} blocks",
+                result.blocks_fetched
+            );
+}
+
+        Ok(result.blocks_fetched)
+    }
+
+    /// Get wallet height (current block height the wallet is synced to)
+    pub async fn get_height(&self) -> Result<u64> {
+        #[derive(Deserialize)]
+        struct HeightResult {
+            height: u64,
+        }
+
+        let result: HeightResult = self.call("get_height", serde_json::json!({})).await?;
+        Ok(result.height)
+    }
+
+    /// Check if wallet is ready and operational
+    pub async fn is_ready(&self) -> bool {
+        self.get_balance().await.is_ok()
     }
 }
 
@@ -370,17 +527,35 @@ mod tests {
 
     #[tokio::test]
     #[ignore] // Only run with valid Monero wallet RPC
-    async fn test_get_balance() {
-        let wallet = MoneroWallet::new("http://127.0.0.1:18082/json_rpc".to_string());
+    async fn test_connect_existing() {
+        let wallet = MoneroWallet::connect_existing(
+            "http://127.0.0.1:18082/json_rpc".to_string(),
+            "eigenix",
+            "",
+        )
+        .await
+        .unwrap();
+
         let balance = wallet.get_balance().await;
         assert!(balance.is_ok());
     }
 
     #[tokio::test]
-    #[ignore] // Only run with valid Monero wallet RPC
-    async fn test_get_address() {
-        let wallet = MoneroWallet::new("http://127.0.0.1:18082/json_rpc".to_string());
-        let address = wallet.get_address().await;
-        assert!(address.is_ok());
+    #[ignore] // Only run with valid seed and wallet RPC
+    async fn test_new_from_seed() {
+        let seed = "your 25 word seed phrase here..."; // Replace with actual seed
+        let restore_height = 0;
+
+        let wallet = MoneroWallet::new_from_seed(
+            "http://127.0.0.1:18082/json_rpc".to_string(),
+            seed,
+            restore_height,
+            "eigenix_test",
+            "",
+        )
+        .await
+        .unwrap();
+
+        assert!(wallet.is_ready().await);
     }
 }

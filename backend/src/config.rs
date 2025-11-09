@@ -54,6 +54,7 @@ pub struct Config {
     pub bitcoin: BitcoinConfig,
     pub monero: MoneroConfig,
     pub asb: AsbConfig,
+    pub wallets: WalletsConfig,
     pub containers: ContainerConfig,
 }
 
@@ -87,6 +88,20 @@ pub struct AsbConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletsConfig {
+    /// Bitcoin wallet name in Bitcoin Core
+    pub bitcoin_wallet_name: String,
+    /// Whether to rescan blockchain on first initialization
+    pub bitcoin_rescan: bool,
+    /// Monero wallet name in monero-wallet-rpc
+    pub monero_wallet_name: String,
+    /// Monero wallet password (empty string for no password)
+    pub monero_wallet_password: String,
+    /// Monero wallet RPC URL (for wallet operations, different from node RPC)
+    pub monero_wallet_rpc_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContainerConfig {
     pub names: Vec<String>,
 }
@@ -113,6 +128,13 @@ impl Default for Config {
             asb: AsbConfig {
                 rpc_url: "http://127.0.0.1:9944".to_string(),
             },
+            wallets: WalletsConfig {
+                bitcoin_wallet_name: "eigenix".to_string(),
+                bitcoin_rescan: false,
+                monero_wallet_name: "eigenix".to_string(),
+                monero_wallet_password: "".to_string(),
+                monero_wallet_rpc_url: "http://127.0.0.1:18082/json_rpc".to_string(),
+            },
             containers: ContainerConfig {
                 names: vec![
                     "bitcoind".to_string(),
@@ -127,6 +149,20 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Convert to WalletConfig for wallet initialization
+    pub fn to_wallet_config(&self) -> crate::wallets::WalletConfig {
+        crate::wallets::WalletConfig {
+            bitcoin_rpc_url: self.bitcoin.rpc_url.clone(),
+            bitcoin_cookie_path: self.bitcoin.cookie_path.clone(),
+            bitcoin_wallet_name: self.wallets.bitcoin_wallet_name.clone(),
+            bitcoin_rescan: self.wallets.bitcoin_rescan,
+            monero_rpc_url: self.wallets.monero_wallet_rpc_url.clone(),
+            monero_wallet_name: self.wallets.monero_wallet_name.clone(),
+            monero_wallet_password: self.wallets.monero_wallet_password.clone(),
+            asb_rpc_url: self.asb.rpc_url.clone(),
+        }
+    }
+
     /// Load configuration from CLI arguments and optional config file
     pub fn load(cli: Cli) -> anyhow::Result<Self> {
         let mut config = if let Some(config_path) = &cli.config {
