@@ -23,6 +23,7 @@ in
     ./mempool.nix
     ./web.nix
     ./backend.nix
+    ./test-runner.nix
   ];
 
   options.services.eigenix = {

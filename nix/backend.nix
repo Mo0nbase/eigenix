@@ -32,6 +32,7 @@ in
     # Ensure data directories exist with secure permissions
     systemd.tmpfiles.rules = [
       "d ${settings.storage.baseDataDir}/surrealdb 0755 1000 1000 -"
+      "d ${settings.storage.baseDataDir}/monero-wallets 0755 1000 1000 -"
     ];
 
     # Create eigenix-network if it doesn't exist (normally created by ASB module)
@@ -89,27 +90,77 @@ in
       wantedBy = [ "eigenix-root.target" ];
     };
 
+    # Monero wallet RPC container
+    virtualisation.oci-containers.containers."monero-wallet-rpc" = {
+      image = "ghcr.io/sethforprivacy/simple-monero-wallet-rpc:latest";
+      volumes = [
+        "${settings.storage.baseDataDir}/monero-wallets:/wallet:rw,Z"
+      ];
+      ports = [
+        "127.0.0.1:18082:18082/tcp"
+      ];
+      cmd = [
+        "--daemon-host=monerod"
+        "--daemon-port=${toString settings.ports.moneroRpc}"
+        "--rpc-bind-port=18082"
+        "--wallet-dir=/wallet"
+        "--disable-rpc-login"
+        "--log-level=1"
+      ];
+      extraOptions = [
+        "--network-alias=monero-wallet-rpc"
+        "--network=eigenix-network"
+        # Resource limits
+        "--memory=1g"
+        "--cpus=1.0"
+        "--pids-limit=256"
+      ];
+    };
+
+    systemd.services."podman-monero-wallet-rpc" = {
+      serviceConfig.Restart = lib.mkOverride 90 "always";
+      after = [ 
+        "podman-network-eigenix.service"
+        "podman-monerod.service"
+      ];
+      requires = [ 
+        "podman-network-eigenix.service"
+        "podman-monerod.service"
+      ];
+      partOf = [ "eigenix-root.target" ];
+      wantedBy = [ "eigenix-root.target" ];
+    };
+
     # Eigenix backend service
     systemd.services.eigenix-backend = {
       description = "Eigenix Backend API";
       after = [
         "network.target"
         "podman-surrealdb.service"
+        "podman-asb.service"
+        "podman-monero-wallet-rpc.service"
       ];
-      requires = [ "podman-surrealdb.service" ];
+      requires = [
+        "podman-surrealdb.service"
+        "podman-asb.service"
+        "podman-monero-wallet-rpc.service"
+      ];
       wantedBy = [ "eigenix-root.target" ];
       partOf = [ "eigenix-root.target" ];
 
       environment = {
         BIND_HOST = settings.backend.host;
         BIND_PORT = toString settings.ports.eigenixBackend;
-        ASB_RPC_URL = "http://asb:${toString settings.ports.asbRpc}";
-        BITCOIN_RPC_URL = "http://bitcoind:${toString settings.ports.bitcoinRpc}";
-        MONERO_RPC_URL = "http://monerod:${toString settings.ports.moneroRpc}";
-        SURREALDB_URL = "http://surrealdb:${toString settings.ports.surrealdb}";
+        ASB_RPC_URL = "http://localhost:${toString settings.ports.asbRpc}";
+        BITCOIN_RPC_URL = "http://localhost:${toString settings.ports.bitcoinRpc}";
+        MONERO_RPC_URL = "http://localhost:${toString settings.ports.moneroRpc}";
+        SURREALDB_URL = "http://localhost:${toString settings.ports.surrealdb}";
         SURREALDB_USER = "root";
         SURREALDB_PASS = "root";
         RUST_LOG = settings.backend.logLevel;
+        BITCOIN_COOKIE_PATH = "${settings.storage.baseDataDir}/bitcoind-data/.cookie";
+        MONERO_WALLET_RPC_URL = "http://localhost:18082/json_rpc";
+        WALLET_NAME = "eigenix";
       };
 
       serviceConfig = {
@@ -118,10 +169,15 @@ in
         Restart = "on-failure";
         RestartSec = "10s";
 
+        # Run as mo0nbase user to access cookie file (containers use same UID)
+        User = "mo0nbase";
+        Group = "users";
+
         # Security hardening
-        DynamicUser = true;
         PrivateTmp = true;
         ProtectSystem = "strict";
+        # Need access to /mnt/vault for bitcoin cookie
+        ReadOnlyPaths = [ settings.storage.baseDataDir ];
         ProtectHome = true;
         NoNewPrivileges = true;
         PrivateDevices = true;

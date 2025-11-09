@@ -147,22 +147,39 @@ impl BitcoinWallet {
     /// Initialize wallet in Bitcoin Core with descriptor
     async fn initialize_wallet(&self, descriptor: &str, rescan: bool) -> Result<()> {
         // Try to create wallet (ignore error if already exists)
-        match self.create_wallet().await {
-            Ok(_) => tracing::info!("Created new Bitcoin wallet: {}", self.wallet_name),
+        let wallet_existed = match self.create_wallet().await {
+            Ok(_) => {
+                tracing::info!("Created new Bitcoin wallet: {}", self.wallet_name);
+                false
+            }
             Err(e) => {
                 // Check if error is "wallet already exists"
                 if e.to_string().contains("already exists") {
                     tracing::info!("Bitcoin wallet already exists: {}", self.wallet_name);
-                    // Load the existing wallet
-                    self.load_wallet().await?;
+                    // Try to load the existing wallet (ignore if already loaded)
+                    match self.load_wallet().await {
+                        Ok(_) => tracing::info!("Loaded existing wallet: {}", self.wallet_name),
+                        Err(load_err) => {
+                            if load_err.to_string().contains("already loaded") {
+                                tracing::info!("Bitcoin wallet already loaded: {}", self.wallet_name);
+                            } else {
+                                return Err(load_err.context("Failed to load existing wallet"));
+                            }
+                        }
+                    }
+                    true
                 } else {
                     return Err(e);
                 }
             }
-        }
+        };
 
-        // Import descriptor
-        self.import_descriptors(descriptor, rescan).await?;
+        // Only import descriptor if this is a new wallet
+        if !wallet_existed {
+            self.import_descriptors(descriptor, rescan).await?;
+        } else {
+            tracing::info!("Skipping descriptor import for existing wallet");
+        }
 
         Ok(())
     }
@@ -200,6 +217,18 @@ impl BitcoinWallet {
         Ok(())
     }
 
+    /// Add checksum to a descriptor using Bitcoin Core's getdescriptorinfo
+    async fn add_checksum_to_descriptor(&self, descriptor: &str) -> Result<String> {
+        #[derive(Deserialize)]
+        struct DescriptorInfo {
+            descriptor: String,
+        }
+
+        let params = serde_json::json!([descriptor]);
+        let info: DescriptorInfo = self.call("getdescriptorinfo", params).await?;
+        Ok(info.descriptor)
+    }
+
     /// Import descriptors into Bitcoin Core wallet
     async fn import_descriptors(&self, descriptor: &str, rescan: bool) -> Result<()> {
         #[derive(Deserialize)]
@@ -207,12 +236,21 @@ impl BitcoinWallet {
             success: bool,
             #[serde(default)]
             warnings: Vec<String>,
+            #[serde(default)]
+            error: Option<serde_json::Value>,
         }
+
+        // Add checksum to descriptor if missing
+        let descriptor_with_checksum = if !descriptor.contains('#') {
+            self.add_checksum_to_descriptor(descriptor).await?
+        } else {
+            descriptor.to_string()
+        };
 
         let params = if rescan {
             serde_json::json!([[
                 {
-                    "desc": descriptor,
+                    "desc": descriptor_with_checksum,
                     "timestamp": 0,
                     "active": true,
                 }
@@ -220,7 +258,7 @@ impl BitcoinWallet {
         } else {
             serde_json::json!([[
                 {
-                    "desc": descriptor,
+                    "desc": descriptor_with_checksum,
                     "timestamp": "now",
                     "active": true,
                 }
@@ -231,7 +269,15 @@ impl BitcoinWallet {
 
         for result in &results {
             if !result.success {
-                anyhow::bail!("Failed to import descriptor");
+                // Check if the error is because descriptor is already imported
+                if let Some(error) = &result.error {
+                    let error_str = error.to_string();
+                    if error_str.contains("already") || error_str.contains("exists") {
+                        tracing::info!("Descriptor already imported, skipping");
+                        continue;
+                    }
+                }
+                anyhow::bail!("Failed to import descriptor: {:?}", result.error);
             }
             for warning in &result.warnings {
                 tracing::warn!("Descriptor import warning: {}", warning);

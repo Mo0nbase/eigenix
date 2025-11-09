@@ -21,7 +21,20 @@
       ];
 
       perSystem =
-        { pkgs, system, ... }:
+        { pkgs, system, self', ... }:
+        let
+          rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+            extensions = [
+              "rust-src"
+              "rust-analyzer"
+              "clippy"
+            ];
+          };
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = rustToolchain;
+            rustc = rustToolchain;
+          };
+        in
         {
           # Import nixpkgs with rust-overlay
           _module.args.pkgs = import inputs.nixpkgs {
@@ -30,7 +43,7 @@
           };
 
           # Set default package to the web frontend
-          packages.default = inputs.self.packages.${system}.eigenix-web;
+          packages.default = self'.packages.eigenix-web;
         };
     };
 }

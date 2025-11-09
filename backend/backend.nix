@@ -25,37 +25,75 @@
       };
     in
     {
-      packages.eigenix-backend = rustPlatform.buildRustPackage {
-        pname = "eigenix-backend";
-        version = "0.1.0";
-        src = lib.cleanSource ./.;
+      packages = {
+        eigenix-backend = rustPlatform.buildRustPackage {
+          pname = "eigenix-backend";
+          version = "0.1.0";
+          src = lib.cleanSource ./.;
 
-        cargoLock.lockFile = ./Cargo.lock;
+          cargoLock.lockFile = ./Cargo.lock;
 
-        nativeBuildInputs = [
-          pkgs.pkg-config
-          rustToolchain
-          pkgs.gcc
-        ];
+          nativeBuildInputs = [
+            pkgs.pkg-config
+            rustToolchain
+            pkgs.gcc
+          ];
 
-        buildInputs = [
-          pkgs.openssl
-        ]
-        ++ lib.optionals pkgs.stdenv.isDarwin [
-          pkgs.darwin.apple_sdk.frameworks.Security
-        ];
+          buildInputs = [
+            pkgs.openssl
+          ]
+          ++ lib.optionals pkgs.stdenv.isDarwin [
+            pkgs.darwin.apple_sdk.frameworks.Security
+          ];
 
-        # Only build the backend binary
-        cargoBuildFlags = [
-          "--package"
-          "eigenix-backend"
-        ];
+          # Only build the backend binary
+          cargoBuildFlags = [
+            "--package"
+            "eigenix-backend"
+          ];
 
-        doCheck = false;
+          doCheck = false;
 
-        meta = with lib; {
-          description = "Eigenix Axum Backend";
-          license = licenses.mit;
+          meta = with lib; {
+            description = "Eigenix Axum Backend";
+            license = licenses.mit;
+          };
+        };
+
+        eigenix-backend-tests = rustPlatform.buildRustPackage {
+          pname = "eigenix-backend";
+          version = "0.1.0";
+          src = lib.cleanSource ./.;
+
+          cargoLock.lockFile = ./Cargo.lock;
+
+          nativeBuildInputs = [
+            pkgs.pkg-config
+            rustToolchain
+            pkgs.gcc
+            pkgs.cargo-nextest
+          ];
+
+          buildInputs = [
+            pkgs.openssl
+          ]
+          ++ lib.optionals pkgs.stdenv.isDarwin [
+            pkgs.darwin.apple_sdk.frameworks.Security
+          ];
+
+          # Build the project with tests
+          cargoBuildFlags = [
+            "--package"
+            "eigenix-backend"
+          ];
+
+          # Run tests in the VM, not during build
+          doCheck = false;
+
+          meta = with lib; {
+            description = "Eigenix Axum Backend with Tests";
+            license = licenses.mit;
+          };
         };
       };
     };

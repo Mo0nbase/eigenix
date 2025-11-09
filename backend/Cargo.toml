@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Eigenix Contributors"]
 edition = "2021"
 
+[lib]
+name = "eigenix_backend"
+path = "src/lib.rs"
+
+[[bin]]
+name = "eigenix-backend"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
